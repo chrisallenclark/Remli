@@ -3,10 +3,14 @@ import SwiftData
 
 /// Owns the SwiftData stack.
 ///
-/// CloudKit is not switched on yet — that needs entitlements and a container, which
-/// arrive with the sync phase. The models are already written to CloudKit's rules though,
-/// so turning it on later is a configuration change rather than a migration.
+/// Backed by the user's own private CloudKit database, so ideas follow them across
+/// devices and survive a lost phone without Remli running a server. Honouring CloudKit's
+/// schema rules from the first commit — defaults everywhere, optional relationships with
+/// inverses, no unique constraints — is what makes switching it on here a configuration
+/// change rather than a migration.
 enum RemliSchema {
+
+    static let cloudKitContainerID = "iCloud.com.chrisallenclark.remli"
 
     static let schema = Schema([
         Idea.self,
@@ -17,7 +21,10 @@ enum RemliSchema {
     static func makeContainer(inMemory: Bool = false) throws -> ModelContainer {
         let configuration = ModelConfiguration(
             schema: schema,
-            isStoredInMemoryOnly: inMemory
+            isStoredInMemoryOnly: inMemory,
+            // In-memory stores are for previews and tests; pointing those at CloudKit
+            // would try to sync throwaway fixture data into the user's real account.
+            cloudKitDatabase: inMemory ? .none : .private(cloudKitContainerID)
         )
         return try ModelContainer(for: schema, configurations: [configuration])
     }

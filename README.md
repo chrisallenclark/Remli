@@ -22,20 +22,21 @@ you choose, when your calendar goes quiet, or in a weekly review.
 
 ## Status
 
-Early. Built in phases, each ending on a green build:
+Feature-complete and building green. Awaiting an Apple Developer account to ship the
+first TestFlight build.
 
 | | Phase | State |
 |---|---|---|
-| P0 | Scaffolding, CI, TestFlight pipeline | in progress |
-| P1 | Design system, data model, text capture | |
-| P2 | Voice capture and live transcription | |
-| P3 | Auto-titling, emergent categories, idea vs task | |
-| P4 | Connection engine, graph and Paths | |
-| P5 | Resurfacing and notifications | |
-| P6 | Widgets, Action Button, Siri | |
-| P7 | Semantic search and smart collections | |
-| P8 | Optional Claude provider | |
-| P9 | App Store readiness | |
+| P0 | Scaffolding, CI, TestFlight pipeline | ✅ |
+| P1 | Design system, data model, text capture | ✅ |
+| P2 | Voice capture and live transcription | ✅ |
+| P3 | Auto-titling, emergent categories, idea vs task | ✅ |
+| P4 | Connection engine, graph and Paths | ✅ |
+| P5 | Resurfacing and notifications | ✅ |
+| P6 | Widgets, Action Button, Siri | ✅ |
+| P7 | Semantic search and smart collections | ✅ |
+| P8 | Optional Claude provider | ✅ |
+| P9 | App Store readiness | ✅ |
 
 ## Requirements
 

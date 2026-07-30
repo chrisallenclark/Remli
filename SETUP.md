@@ -100,7 +100,48 @@ Multi-line is fine. Don't base64 it, don't strip the header lines.
 
 ---
 
-## 6. Install TestFlight on your iPhone
+## 6. Enable iCloud on the App ID
+
+Remli syncs your ideas through your own iCloud account. That needs a container registered
+against the app.
+
+1. Go to <https://developer.apple.com/account/resources/identifiers/list>
+2. Click the `com.chrisallenclark.remli` identifier
+3. Tick **iCloud**, then **Configure**
+4. Click **+** to create a container. Use exactly:
+
+   ```
+   iCloud.com.chrisallenclark.remli
+   ```
+
+   The string must match character for character — the app asks for that exact container,
+   and a mismatch makes signed builds fail to install.
+5. Assign the container to the App ID, then **Save**.
+
+> If you skip this, everything still works — your ideas just stay on one device, and the
+> signed build will fail to install until the container exists.
+
+---
+
+## 7. Turn on the website (optional, needed to publish)
+
+The App Store requires a privacy policy URL and a support URL. Both are already written
+and sitting in this repo — you just need to switch on hosting.
+
+1. Go to <https://github.com/chrisallenclark/Cued/settings/pages>
+2. Under **Source**, pick **Deploy from a branch**
+3. Branch: `main`, folder: **`/docs`**, then **Save**
+
+A minute later they're live at:
+
+- `https://chrisallenclark.github.io/Cued/` — support page
+- `https://chrisallenclark.github.io/Cued/privacy` — privacy policy
+
+(If you rename the repo to `Remli`, the URLs change to match.)
+
+---
+
+## 8. Install TestFlight on your iPhone
 
 Get it from the App Store: <https://apps.apple.com/app/testflight/id899247664>
 

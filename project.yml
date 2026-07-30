@@ -45,6 +45,7 @@ targets:
         excludes:
           - "Info.plist"
           - "Widgets-Info.plist"
+          - "Remli.entitlements"
     dependencies:
       - target: RemliWidgets
     settings:
@@ -52,6 +53,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.chrisallenclark.remli
         PRODUCT_NAME: Remli
         INFOPLIST_FILE: Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Resources/Remli.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         TARGETED_DEVICE_FAMILY: "1" # iPhone only
