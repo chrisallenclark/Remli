@@ -27,6 +27,13 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 
+	<!-- Shown verbatim in the system permission dialogs. Each says what Remli does
+	     with the permission and, where relevant, what it does not do. -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Remli listens so you can speak an idea instead of typing it. Audio is transcribed on your device and then discarded — no recording is ever saved or uploaded.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Remli turns what you say into text on your device, so a spoken idea becomes something you can search and connect later.</string>
+
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
