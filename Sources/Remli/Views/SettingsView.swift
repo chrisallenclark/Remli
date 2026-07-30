@@ -125,8 +125,12 @@ struct SettingsView: View {
                     }
                     Task {
                         // Only ever asked for here, so the prompt makes sense.
-                        let granted = coordinator.isCalendarAuthorized
-                            || (await coordinator.enableCalendarAccess())
+                        // Written out rather than using `||` — its right-hand side is an
+                        // autoclosure, which cannot contain an await.
+                        var granted = coordinator.isCalendarAuthorized
+                        if !granted {
+                            granted = await coordinator.enableCalendarAccess()
+                        }
                         store.settings.freeTimeEnabled = granted
                     }
                 }

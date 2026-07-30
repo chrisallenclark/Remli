@@ -52,12 +52,16 @@ enum ResurfacingScorer {
         let ageDays = ageHours / 24
         let recencyOfCapture = ageDays <= 90 ? 1.0 : max(0.45, 1 - (ageDays - 90) / 500)
 
-        var score =
-            candidate.importance * 0.35 +
-            staleness * 0.30 +
-            novelty * 0.20 +
-            recencyOfCapture * 0.15
+        // Split into named terms rather than one expression: the type checker times out
+        // on a four-way sum of mixed literals and computed Doubles, and this is easier to
+        // reason about anyway.
+        let importanceTerm: Double = candidate.importance * 0.35
+        let stalenessTerm: Double = staleness * 0.30
+        let noveltyTerm: Double = novelty * 0.20
+        let recencyTerm: Double = recencyOfCapture * 0.15
 
+        var score: Double = importanceTerm + stalenessTerm
+        score += noveltyTerm + recencyTerm
         score *= statusWeight(candidate.status)
 
         if candidate.pinned {
