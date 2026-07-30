@@ -82,24 +82,42 @@ enum ResurfacingScorer {
         }
     }
 
+    /// A candidate paired with its score.
+    ///
+    /// A named type rather than an inline tuple: chaining map/filter/sorted/prefix over an
+    /// anonymous labelled tuple is enough to time out the expression type checker.
+    private struct Scored {
+        var candidate: ResurfacingCandidate
+        var value: Double
+    }
+
     /// Highest-scoring ideas first, dropping anything scoring zero.
     static func rank(
         _ candidates: [ResurfacingCandidate],
         now: Date = .now,
         limit: Int = .max
     ) -> [ResurfacingCandidate] {
-        candidates
-            .map { (candidate: $0, score: score($0, now: now)) }
-            .filter { $0.score > 0 }
-            // Ties broken by id so ordering is stable across runs rather than dependent
-            // on fetch order.
-            .sorted {
-                $0.score == $1.score
-                    ? $0.candidate.id.uuidString < $1.candidate.id.uuidString
-                    : $0.score > $1.score
+        var scored: [Scored] = []
+        scored.reserveCapacity(candidates.count)
+
+        for candidate in candidates {
+            let value = score(candidate, now: now)
+            if value > 0 {
+                scored.append(Scored(candidate: candidate, value: value))
             }
-            .prefix(limit)
-            .map(\.candidate)
+        }
+
+        // Ties broken by id so ordering is stable across runs rather than dependent on
+        // fetch order.
+        scored.sort { lhs, rhs in
+            if lhs.value == rhs.value {
+                return lhs.candidate.id.uuidString < rhs.candidate.id.uuidString
+            }
+            return lhs.value > rhs.value
+        }
+
+        let capped = limit < scored.count ? Array(scored[0..<limit]) : scored
+        return capped.map(\.candidate)
     }
 
     /// The best idea for a specific window of free time.
@@ -111,16 +129,26 @@ enum ResurfacingScorer {
         availableMinutes: Int,
         now: Date = .now
     ) -> ResurfacingCandidate? {
-        rank(candidates, now: now)
-            .filter { $0.estimatedMinutes > 0 && $0.estimatedMinutes <= availableMinutes }
-            .max { lhs, rhs in
-                // Among those that fit, prefer the one using the window most fully,
-                // falling back to score.
-                let lhsFit = Double(lhs.estimatedMinutes) / Double(availableMinutes)
-                let rhsFit = Double(rhs.estimatedMinutes) / Double(availableMinutes)
-                if abs(lhsFit - rhsFit) > 0.15 { return lhsFit < rhsFit }
-                return score(lhs, now: now) < score(rhs, now: now)
+        let ranked = rank(candidates, now: now)
+
+        var fitting: [ResurfacingCandidate] = []
+        for candidate in ranked {
+            let minutes = candidate.estimatedMinutes
+            if minutes > 0 && minutes <= availableMinutes {
+                fitting.append(candidate)
             }
+        }
+
+        // Among those that fit, prefer the one using the window most fully, falling back
+        // to score when two are similarly sized.
+        return fitting.max { lhs, rhs in
+            let lhsFit = Double(lhs.estimatedMinutes) / Double(availableMinutes)
+            let rhsFit = Double(rhs.estimatedMinutes) / Double(availableMinutes)
+            if abs(lhsFit - rhsFit) > 0.15 {
+                return lhsFit < rhsFit
+            }
+            return score(lhs, now: now) < score(rhs, now: now)
+        }
     }
 }
 
