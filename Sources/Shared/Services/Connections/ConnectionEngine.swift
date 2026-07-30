@@ -46,10 +46,7 @@ final class ConnectionEngine {
     ) {
         self.context = context
         self.embeddings = embeddings
-        self.intelligence = intelligence ?? LayeredIntelligence(providers: [
-            FoundationModelsIntelligence(),
-            HeuristicIntelligence(),
-        ])
+        self.intelligence = intelligence ?? IntelligenceFactory.make()
     }
 
     // MARK: - Running

@@ -15,6 +15,8 @@ struct SettingsView: View {
     @State private var notificationsAuthorized = false
     @State private var isAddingTime = false
     @State private var newTime = Date()
+    @State private var claudeSettings = ClaudeSettingsStore.shared
+    @State private var isShowingClaudeConsent = false
 
     var body: some View {
         NavigationStack {
@@ -37,6 +39,7 @@ struct SettingsView: View {
                 freeTimeSection
                 quietHoursSection
                 engineSection
+                claudeSection
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -179,6 +182,37 @@ struct SettingsView: View {
             Text("Intelligence")
         } footer: {
             Text("Everything runs on this iPhone. Your ideas are never sent anywhere.")
+        }
+    }
+
+    /// The one place an idea can leave the device. Presented as an upgrade the user opts
+    /// into, never as something already running.
+    private var claudeSection: some View {
+        Section {
+            if claudeSettings.isActive {
+                Picker("Model", selection: $claudeSettings.model) {
+                    ForEach(ClaudeModel.allCases, id: \.self) { model in
+                        Text(model.displayName).tag(model)
+                    }
+                }
+
+                Button("Stop using Claude", role: .destructive) {
+                    claudeSettings.disableAndForgetKey()
+                }
+            } else {
+                Button("Use Claude instead…") {
+                    isShowingClaudeConsent = true
+                }
+            }
+        } header: {
+            Text("Optional: Claude")
+        } footer: {
+            Text(claudeSettings.isActive
+                 ? "Ideas are sent to Anthropic when Remli files them. Turning this off deletes your key and stops all outbound requests."
+                 : "Sharper categories and better connections, using your own Anthropic API key. Off by default — your ideas stay on this iPhone until you turn it on.")
+        }
+        .sheet(isPresented: $isShowingClaudeConsent) {
+            ClaudeConsentView(settings: claudeSettings)
         }
     }
 

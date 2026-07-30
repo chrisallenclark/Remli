@@ -35,10 +35,7 @@ final class EnrichmentService {
     ) {
         self.context = context
         self.embeddings = embeddings
-        self.intelligence = intelligence ?? LayeredIntelligence(providers: [
-            FoundationModelsIntelligence(),
-            HeuristicIntelligence(),
-        ])
+        self.intelligence = intelligence ?? IntelligenceFactory.make()
     }
 
     var engineName: String { intelligence.displayName }
