@@ -42,7 +42,7 @@ struct FoundationModelsIntelligence: IdeaIntelligence {
     /// between a category that always has an icon and one that sometimes renders blank.
     /// The model physically cannot emit a value outside this set.
     @Generable
-    private struct Draft {
+    struct Draft {
 
         @Guide(description: "True only if this is a chore or errand to tick off, like 'call the dentist'. False for anything exploratory, creative or worth developing.")
         var isQuickTask: Bool
@@ -141,7 +141,7 @@ struct FoundationModelsIntelligence: IdeaIntelligence {
     // MARK: - Connections
 
     @Generable
-    private struct LinkDraft {
+    struct LinkDraft {
 
         @Guide(description: "The number of the related idea, taken from the numbered list.", .range(1...12))
         var ideaNumber: Int
@@ -159,7 +159,7 @@ struct FoundationModelsIntelligence: IdeaIntelligence {
     }
 
     @Generable
-    private struct LinkJudgement {
+    struct LinkJudgement {
         @Guide(description: "Only genuinely meaningful connections. Most pairs of ideas are unrelated, so returning an empty list is normal and correct.", .maximumCount(4))
         var links: [LinkDraft]
     }
