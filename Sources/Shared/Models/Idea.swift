@@ -63,6 +63,10 @@ final class Idea {
     /// a completely normal state, not an error.
     var isEnriched: Bool = false
 
+    /// Counts failed enrichment attempts so a thought the model consistently chokes on
+    /// gets left alone rather than retried on every single app launch forever.
+    var enrichmentAttempts: Int = 0
+
     /// Sentence embedding, stored as packed little-endian `Float32`. `Data` rather than
     /// `[Double]` keeps the record small enough that CloudKit sync stays cheap.
     var embedding: Data?

@@ -71,6 +71,10 @@ struct CaptureSheet: View {
         .presentationDragIndicator(.visible)
         .interactiveDismissDisabled(voice.isRunning)
         .task {
+            // A capture is almost always followed by an enrichment, so warming the model
+            // now takes the cold start off the critical path.
+            FoundationModelsIntelligence.prewarm()
+
             if autoStartVoice {
                 await voice.start()
             } else {

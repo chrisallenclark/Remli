@@ -9,7 +9,13 @@ struct RootView: View {
 
     var storeIsEphemeral: Bool = false
 
+    @Environment(\.modelContext) private var context
+
     @State private var isCapturing = false
+
+    /// Built here rather than in `RemliApp.init` so it can take the environment's model
+    /// context and stay on the main actor without any isolation gymnastics.
+    @State private var enrichment: EnrichmentService?
 
     var body: some View {
         NavigationStack {
@@ -21,7 +27,7 @@ struct RootView: View {
                     CaptureButton { isCapturing = true }
                 }
         }
-        .sheet(isPresented: $isCapturing) {
+        .sheet(isPresented: $isCapturing, onDismiss: runEnrichment) {
             CaptureSheet()
         }
         .overlay(alignment: .top) {
@@ -29,6 +35,18 @@ struct RootView: View {
                 EphemeralStoreBanner()
             }
         }
+        .task {
+            // Catches anything captured while the model was unavailable — on a plane, or
+            // before Apple Intelligence finished downloading.
+            if enrichment == nil {
+                enrichment = EnrichmentService(context: context)
+            }
+            await enrichment?.run()
+        }
+    }
+
+    private func runEnrichment() {
+        Task { await enrichment?.run() }
     }
 }
 
