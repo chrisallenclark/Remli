@@ -1,0 +1,58 @@
+name: CI
+
+# Compiles the app on every push. Because development happens on Linux where no
+# Swift/iOS toolchain exists, this workflow IS the compiler — its logs are the
+# primary feedback loop.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (iOS Simulator)
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select newest available Xcode
+        run: |
+          echo "Runner: $(sw_vers -productName) $(sw_vers -productVersion)"
+          echo "Installed Xcodes:"
+          ls -d /Applications/Xcode*.app 2>/dev/null || true
+          latest=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$latest" ]; then
+            sudo xcode-select -s "$latest"
+          fi
+          xcodebuild -version
+          echo "--- SDKs ---"
+          xcodebuild -showsdks | grep -i ios || true
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: |
+          xcodegen generate --spec project.yml
+          echo "--- targets ---"
+          xcodebuild -list -project Remli.xcodeproj
+
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Remli.xcodeproj \
+            -scheme Remli \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO

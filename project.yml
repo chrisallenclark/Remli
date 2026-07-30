@@ -1,0 +1,65 @@
+# XcodeGen project definition.
+#
+# The .xcodeproj is NOT committed — CI runs `xcodegen generate` on every build.
+# This file is the source of truth for targets, settings and capabilities.
+# Docs: https://github.com/yonaskolb/XcodeGen/blob/master/Docs/ProjectSpec.md
+
+name: Remli
+
+options:
+  bundleIdPrefix: com.chrisallenclark
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    # Swift 5 language mode for now. Swift 6 strict concurrency plus SwiftData actor
+    # isolation produces hundreds of errors that are painful to resolve without a local
+    # compiler; we tighten this once the app exists and builds green.
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+    # DEVELOPMENT_TEAM is deliberately NOT set here. It is passed on the xcodebuild
+    # command line during release so that ordinary CI builds need no Apple account
+    # and no secrets, and so XcodeGen never depends on an env var being present.
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: NO
+    GCC_TREAT_WARNINGS_AS_ERRORS: NO
+
+targets:
+  Remli:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources/Remli
+      - path: Resources
+        excludes:
+          - "Info.plist"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.chrisallenclark.remli
+        PRODUCT_NAME: Remli
+        INFOPLIST_FILE: Resources/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        TARGETED_DEVICE_FAMILY: "1" # iPhone only
+        SUPPORTS_MACCATALYST: NO
+        INFOPLIST_KEY_UIUserInterfaceStyle: Automatic
+        SWIFT_EMIT_LOC_STRINGS: YES
+        # Capabilities arrive in later phases (CloudKit, App Groups, background modes).
+        # P0 deliberately ships with the minimum entitlement surface so that the very
+        # first signed build cannot fail on a provisioning profile mismatch.
+
+schemes:
+  Remli:
+    build:
+      targets:
+        Remli: all
+    run:
+      config: Debug
+    archive:
+      config: Release

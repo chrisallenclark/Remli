@@ -1,0 +1,151 @@
+name: Release to TestFlight
+
+# Archives, signs and ships a build to TestFlight.
+#
+# Signing deliberately avoids fastlane match and a certificates repo. Instead
+# `xcodebuild -allowProvisioningUpdates` is handed an App Store Connect API key and
+# provisions the certificate and profile itself on the ephemeral runner.
+#
+# Required repository secrets:
+#   ASC_KEY_ID     — the App Store Connect API key ID
+#   ASC_ISSUER_ID  — the issuer ID from the same page
+#   ASC_KEY_P8     — the RAW contents of the downloaded AuthKey_XXXX.p8, pasted whole,
+#                    including the BEGIN/END lines. Not base64. GitHub secrets accept
+#                    multi-line values, and the upload action expects PEM text.
+#   TEAM_ID        — the 10-character Apple Developer team ID
+#
+# NOTE: the API key must have the App Manager role. A Developer-role key
+# authenticates fine and then fails the upload with an opaque "unauthorized".
+
+on:
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: "What's new in this build (shown to testers)"
+        required: false
+        default: "Automated build"
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  testflight:
+    name: Archive, sign, upload
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify secrets are present
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+        run: |
+          missing=0
+          for v in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 TEAM_ID; do
+            if [ -z "${!v}" ]; then echo "::error::Missing secret $v"; missing=1; fi
+          done
+          [ "$missing" -eq 0 ] || exit 1
+          echo "All four secrets present."
+
+      - name: Select newest available Xcode
+        run: |
+          latest=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$latest" ]; then sudo xcode-select -s "$latest"; fi
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Write App Store Connect API key
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+        run: |
+          # xcodebuild looks for keys in this well-known location.
+          mkdir -p ~/.appstoreconnect/private_keys
+          printf '%s\n' "$ASC_KEY_P8" > ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
+          chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
+          # Sanity check without ever printing the key itself.
+          grep -q "BEGIN PRIVATE KEY" ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
+            || { echo "::error::ASC_KEY_P8 is not a PEM private key. Paste the whole AuthKey_XXXX.p8 file contents, including the BEGIN/END lines."; exit 1; }
+
+      - name: Generate Xcode project
+        run: xcodegen generate --spec project.yml
+
+      - name: Archive
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project Remli.xcodeproj \
+            -scheme Remli \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Remli.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }}
+
+      - name: Write export options
+        env:
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+            <key>destination</key><string>export</string>
+          </dict>
+          </plist>
+          PLIST
+
+      - name: Export IPA
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Remli.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          ls -la "$RUNNER_TEMP/export"
+
+      - name: Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v4
+        with:
+          app-path: ${{ runner.temp }}/export/Remli.ipa
+          issuer-id: ${{ secrets.ASC_ISSUER_ID }}
+          api-key-id: ${{ secrets.ASC_KEY_ID }}
+          api-private-key: ${{ secrets.ASC_KEY_P8 }}
+          release-notes: ${{ inputs.notes }}
+          uses-non-exempt-encryption: false
+
+      - name: Keep the IPA for debugging
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Remli-ipa-${{ github.run_number }}
+          path: ${{ runner.temp }}/export/
+          if-no-files-found: warn
+          retention-days: 14
