@@ -3,22 +3,27 @@ import SwiftUI
 
 /// The app shell.
 ///
-/// Three tabs, each earning its place: the list is where ideas live, the map is where you
-/// see them as a whole, and paths is where you find something to actually start on.
-/// Capture is a floating action rather than a tab, because it needs to be reachable from
-/// anywhere without a mode change.
+/// Four tabs, each earning its place: the list is where ideas live, the map shows them as
+/// a whole, Paths finds something to start on, and Review is the deliberate weekly
+/// sit-down. Capture is a floating action rather than a tab, because it has to be
+/// reachable from anywhere without a mode change.
 struct RootView: View {
 
     var storeIsEphemeral: Bool = false
 
     @Environment(\.modelContext) private var context
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var isCapturing = false
+    @State private var isShowingSettings = false
 
     /// Built here rather than in `RemliApp.init` so they can take the environment's model
     /// context and stay on the main actor without any isolation gymnastics.
     @State private var enrichment: EnrichmentService?
     @State private var connections: ConnectionEngine?
+    @State private var coordinator: ResurfacingCoordinator?
+    @State private var settingsStore = ResurfacingSettingsStore()
+    @State private var router = NotificationRouter()
 
     var body: some View {
         TabView {
@@ -28,6 +33,15 @@ struct RootView: View {
                         .background(Theme.Palette.canvas)
                         .navigationTitle("Ideas")
                         .navigationBarTitleDisplayMode(.large)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button {
+                                    isShowingSettings = true
+                                } label: {
+                                    Image(systemName: "gearshape")
+                                }
+                            }
+                        }
                         .safeAreaInset(edge: .bottom) {
                             CaptureButton { isCapturing = true }
                         }
@@ -35,19 +49,34 @@ struct RootView: View {
             }
 
             Tab("Map", systemImage: "point.3.filled.connected.trianglepath.dotted") {
-                NavigationStack {
-                    MapView()
-                }
+                NavigationStack { MapView() }
             }
 
             Tab("Paths", systemImage: "arrow.triangle.branch") {
-                NavigationStack {
-                    PathsView()
-                }
+                NavigationStack { PathsView() }
+            }
+
+            Tab("Review", systemImage: "calendar.day.timeline.left") {
+                NavigationStack { ReviewView(coordinator: coordinator) }
             }
         }
-        .sheet(isPresented: $isCapturing, onDismiss: runEnrichment) {
+        .sheet(isPresented: $isCapturing, onDismiss: runBacklog) {
             CaptureSheet()
+        }
+        .sheet(isPresented: $isShowingSettings) {
+            if let coordinator {
+                SettingsView(store: settingsStore, coordinator: coordinator)
+            }
+        }
+        // A tapped notification opens the idea it was about. Landing on a generic list
+        // would waste the interruption entirely.
+        .sheet(item: Binding(
+            get: { router.pendingIdeaID.map(IdentifiedUUID.init) },
+            set: { router.pendingIdeaID = $0?.id }
+        )) { wrapper in
+            NavigationStack {
+                SurfacedIdeaView(ideaID: wrapper.id, coordinator: coordinator)
+            }
         }
         .overlay(alignment: .top) {
             if storeIsEphemeral {
@@ -55,18 +84,29 @@ struct RootView: View {
             }
         }
         .task {
-            // Catches anything captured while the model was unavailable — on a plane, or
-            // before Apple Intelligence finished downloading.
             if enrichment == nil {
                 enrichment = EnrichmentService(context: context)
                 connections = ConnectionEngine(context: context)
+                coordinator = ResurfacingCoordinator(context: context, settingsStore: settingsStore)
+                router.install()
             }
             await processBacklog()
+            await coordinator?.refresh()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // Leaving the app is the moment to queue the next background pass and make
+            // sure the plan reflects anything captured this session.
+            if phase == .background {
+                ResurfacingCoordinator.scheduleBackgroundRefresh()
+            }
         }
     }
 
-    private func runEnrichment() {
-        Task { await processBacklog() }
+    private func runBacklog() {
+        Task {
+            await processBacklog()
+            await coordinator?.refresh()
+        }
     }
 
     /// Enrichment first, then linking — linking reads the title and category that
@@ -74,6 +114,41 @@ struct RootView: View {
     private func processBacklog() async {
         await enrichment?.run()
         await connections?.run()
+    }
+}
+
+/// `sheet(item:)` needs an `Identifiable`, and `UUID` alone is not.
+private struct IdentifiedUUID: Identifiable {
+    let id: UUID
+}
+
+/// Resolves the idea a notification referred to, and records that it was surfaced.
+private struct SurfacedIdeaView: View {
+    let ideaID: UUID
+    let coordinator: ResurfacingCoordinator?
+
+    @Query private var matches: [Idea]
+
+    init(ideaID: UUID, coordinator: ResurfacingCoordinator?) {
+        self.ideaID = ideaID
+        self.coordinator = coordinator
+        _matches = Query(filter: #Predicate<Idea> { $0.id == ideaID })
+    }
+
+    var body: some View {
+        Group {
+            if let idea = matches.first {
+                IdeaDetailView(idea: idea)
+            } else {
+                // The idea was deleted between the notification being scheduled and tapped.
+                ContentUnavailableView(
+                    "That idea is gone",
+                    systemImage: "questionmark.circle",
+                    description: Text("It was deleted after this reminder was scheduled.")
+                )
+            }
+        }
+        .onAppear { coordinator?.markSurfaced(ideaID: ideaID) }
     }
 }
 

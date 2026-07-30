@@ -33,6 +33,20 @@
 	<string>Remli listens so you can speak an idea instead of typing it. Audio is transcribed on your device and then discarded — no recording is ever saved or uploaded.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Remli turns what you say into text on your device, so a spoken idea becomes something you can search and connect later.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Remli looks at when you're busy — never at what your events are — so it can suggest an idea that fits a gap in your day.</string>
+
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>processing</string>
+	</array>
+	<!-- Must match ResurfacingCoordinator.refreshTaskIdentifier exactly, or
+	     BGTaskScheduler.register throws at launch. -->
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.chrisallenclark.remli.refresh</string>
+	</array>
 
 	<key>UILaunchScreen</key>
 	<dict>
