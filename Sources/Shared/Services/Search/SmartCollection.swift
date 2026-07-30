@@ -77,20 +77,36 @@ enum SmartCollection: Identifiable, Equatable, Hashable {
 
         // Categories ordered by how much is in them, so the ones actually being used sit
         // where they can be reached.
-        var counts: [UUID: (name: String, count: Int)] = [:]
-        for idea in ideas {
-            guard let category = idea.category else { continue }
-            counts[category.id, default: (category.name, 0)].count += 1
+        //
+        // A named struct rather than a labelled tuple: chaining map/sorted over an
+        // anonymous tuple is reliably enough to time out the expression type checker.
+        struct Tally {
+            var id: UUID
+            var name: String
+            var count: Int
         }
 
-        let sorted = counts
-            .map { (id: $0.key, name: $0.value.name, count: $0.value.count) }
-            .sorted { lhs, rhs in
-                lhs.count == rhs.count ? lhs.name < rhs.name : lhs.count > rhs.count
+        var counts: [UUID: Tally] = [:]
+        for idea in ideas {
+            guard let category = idea.category else { continue }
+            if var existing = counts[category.id] {
+                existing.count += 1
+                counts[category.id] = existing
+            } else {
+                counts[category.id] = Tally(id: category.id, name: category.name, count: 1)
             }
+        }
 
-        for entry in sorted {
-            result.append(.category(id: entry.id, name: entry.name))
+        var tallies = Array(counts.values)
+        tallies.sort { lhs, rhs in
+            if lhs.count == rhs.count {
+                return lhs.name < rhs.name
+            }
+            return lhs.count > rhs.count
+        }
+
+        for tally in tallies {
+            result.append(.category(id: tally.id, name: tally.name))
         }
 
         return result
