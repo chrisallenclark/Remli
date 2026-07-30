@@ -35,6 +35,11 @@ targets:
     type: application
     platform: iOS
     sources:
+      # Sources/Shared holds models and the design system. It is a plain source
+      # folder rather than a Swift package because XcodeGen can compile the same
+      # folder into several targets, which is all the widget extension will need
+      # later — without the overhead of an SPM package.
+      - path: Sources/Shared
       - path: Sources/Remli
       - path: Resources
         excludes:
