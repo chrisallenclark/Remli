@@ -17,6 +17,9 @@ struct RootView: View {
     @State private var isCapturing = false
     @State private var isShowingSettings = false
 
+    /// Set by the widget / Action Button / Siri route, which open with the mic already hot.
+    @State private var captureStartsWithVoice = false
+
     /// Built here rather than in `RemliApp.init` so they can take the environment's model
     /// context and stay on the main actor without any isolation gymnastics.
     @State private var enrichment: EnrichmentService?
@@ -43,7 +46,10 @@ struct RootView: View {
                             }
                         }
                         .safeAreaInset(edge: .bottom) {
-                            CaptureButton { isCapturing = true }
+                            CaptureButton {
+                                captureStartsWithVoice = false
+                                isCapturing = true
+                            }
                         }
                 }
             }
@@ -61,7 +67,12 @@ struct RootView: View {
             }
         }
         .sheet(isPresented: $isCapturing, onDismiss: runBacklog) {
-            CaptureSheet()
+            CaptureSheet(autoStartVoice: captureStartsWithVoice)
+        }
+        .onOpenURL { url in
+            guard let wantsVoice = CaptureRoute.wantsVoice(url) else { return }
+            captureStartsWithVoice = wantsVoice
+            isCapturing = true
         }
         .sheet(isPresented: $isShowingSettings) {
             if let coordinator {

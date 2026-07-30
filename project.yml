@@ -44,6 +44,9 @@ targets:
       - path: Resources
         excludes:
           - "Info.plist"
+          - "Widgets-Info.plist"
+    dependencies:
+      - target: RemliWidgets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.chrisallenclark.remli
@@ -59,11 +62,31 @@ targets:
         # P0 deliberately ships with the minimum entitlement surface so that the very
         # first signed build cannot fail on a provisioning profile mismatch.
 
+  # The widget extension compiles exactly one shared file — CaptureRoute.swift — which
+  # imports nothing beyond Foundation and AppIntents. Pulling in all of Sources/Shared
+  # would link SwiftData, Speech, EventKit and the services layer into an extension that
+  # holds no data and only needs to open a URL.
+  RemliWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Sources/Widgets
+      - path: Sources/Shared/Intents/CaptureRoute.swift
+      - path: Resources/Assets.xcassets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.chrisallenclark.remli.widgets
+        PRODUCT_NAME: RemliWidgets
+        INFOPLIST_FILE: Resources/Widgets-Info.plist
+        TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
+
 schemes:
   Remli:
     build:
       targets:
         Remli: all
+        RemliWidgets: all
     run:
       config: Debug
     archive:

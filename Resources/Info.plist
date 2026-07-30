@@ -48,6 +48,20 @@
 		<string>com.chrisallenclark.remli.refresh</string>
 	</array>
 
+	<!-- Deep link target for the widget, the Control Center control and the Action
+	     Button, all of which open straight into a live recording. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.chrisallenclark.remli</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>remli</string>
+			</array>
+		</dict>
+	</array>
+
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
