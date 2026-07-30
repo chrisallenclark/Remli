@@ -3,8 +3,10 @@ import SwiftUI
 
 /// The app shell.
 ///
-/// Deliberately not a TabView yet. Empty tabs for features that do not exist are worse
-/// than no tabs; Map and Review appear once they have something in them.
+/// Three tabs, each earning its place: the list is where ideas live, the map is where you
+/// see them as a whole, and paths is where you find something to actually start on.
+/// Capture is a floating action rather than a tab, because it needs to be reachable from
+/// anywhere without a mode change.
 struct RootView: View {
 
     var storeIsEphemeral: Bool = false
@@ -19,14 +21,30 @@ struct RootView: View {
     @State private var connections: ConnectionEngine?
 
     var body: some View {
-        NavigationStack {
-            IdeasListView()
-                .background(Theme.Palette.canvas)
-                .navigationTitle("Ideas")
-                .navigationBarTitleDisplayMode(.large)
-                .safeAreaInset(edge: .bottom) {
-                    CaptureButton { isCapturing = true }
+        TabView {
+            Tab("Ideas", systemImage: "square.stack") {
+                NavigationStack {
+                    IdeasListView()
+                        .background(Theme.Palette.canvas)
+                        .navigationTitle("Ideas")
+                        .navigationBarTitleDisplayMode(.large)
+                        .safeAreaInset(edge: .bottom) {
+                            CaptureButton { isCapturing = true }
+                        }
                 }
+            }
+
+            Tab("Map", systemImage: "point.3.filled.connected.trianglepath.dotted") {
+                NavigationStack {
+                    MapView()
+                }
+            }
+
+            Tab("Paths", systemImage: "arrow.triangle.branch") {
+                NavigationStack {
+                    PathsView()
+                }
+            }
         }
         .sheet(isPresented: $isCapturing, onDismiss: runEnrichment) {
             CaptureSheet()
