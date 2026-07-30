@@ -49,6 +49,7 @@ jobs:
           xcodebuild -list -project Remli.xcodeproj
 
       - name: Build
+        id: build
         run: |
           set -o pipefail
           xcodebuild build \
@@ -58,7 +59,28 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -skipPackagePluginValidation \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO
+            CODE_SIGNING_REQUIRED=NO \
+            2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      # Same reasoning as the status tag: compiler errors have to be read back on a
+      # machine with no compiler. Pushing them to an orphan branch makes them available
+      # over plain git instead of an authenticated API call.
+      - name: Publish compiler diagnostics
+        if: failure()
+        run: |
+          mkdir -p "$RUNNER_TEMP/ci-log"
+          grep -E "error:|warning:|note:|\*\* BUILD" "$RUNNER_TEMP/build.log" \
+            | head -200 > "$RUNNER_TEMP/ci-log/errors.txt" || true
+          tail -150 "$RUNNER_TEMP/build.log" > "$RUNNER_TEMP/ci-log/tail.txt" || true
+          echo "$GITHUB_SHA" > "$RUNNER_TEMP/ci-log/sha.txt"
+
+          cd "$RUNNER_TEMP/ci-log"
+          git init -q
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "CI diagnostics for $GITHUB_SHA"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-log
 
       # Publishes the outcome as a git tag named ci-pass-<sha> or ci-fail-<sha>.
       #
