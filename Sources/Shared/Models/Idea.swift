@@ -71,6 +71,14 @@ final class Idea {
     /// `[Double]` keeps the record small enough that CloudKit sync stays cheap.
     var embedding: Data?
 
+    /// When the connection engine last looked for links from this idea. Nil means it never
+    /// has. Kept as a date rather than a flag so ideas can be re-linked later, once there
+    /// are more neighbours for them to connect to.
+    var linkedAt: Date?
+
+    /// Retry budget for link finding, for the same reason `enrichmentAttempts` exists.
+    var linkAttempts: Int = 0
+
     // MARK: Relationships
 
     var category: IdeaCategory?

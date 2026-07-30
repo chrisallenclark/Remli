@@ -13,9 +13,10 @@ struct RootView: View {
 
     @State private var isCapturing = false
 
-    /// Built here rather than in `RemliApp.init` so it can take the environment's model
+    /// Built here rather than in `RemliApp.init` so they can take the environment's model
     /// context and stay on the main actor without any isolation gymnastics.
     @State private var enrichment: EnrichmentService?
+    @State private var connections: ConnectionEngine?
 
     var body: some View {
         NavigationStack {
@@ -40,13 +41,21 @@ struct RootView: View {
             // before Apple Intelligence finished downloading.
             if enrichment == nil {
                 enrichment = EnrichmentService(context: context)
+                connections = ConnectionEngine(context: context)
             }
-            await enrichment?.run()
+            await processBacklog()
         }
     }
 
     private func runEnrichment() {
-        Task { await enrichment?.run() }
+        Task { await processBacklog() }
+    }
+
+    /// Enrichment first, then linking — linking reads the title and category that
+    /// enrichment produces, so the order is a real dependency rather than a preference.
+    private func processBacklog() async {
+        await enrichment?.run()
+        await connections?.run()
     }
 }
 

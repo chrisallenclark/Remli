@@ -37,6 +37,8 @@ struct IdeaDetailView: View {
                     TagRow(tags: idea.tags)
                 }
 
+                ConnectionsSection(idea: idea)
+
                 statusControl
 
                 Spacer(minLength: Theme.Space.xxl)

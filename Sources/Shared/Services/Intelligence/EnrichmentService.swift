@@ -21,14 +21,20 @@ final class EnrichmentService {
 
     private let context: ModelContext
     private let intelligence: any IdeaIntelligence
+    private let embeddings: EmbeddingService
 
     private(set) var isWorking = false
 
     /// How many ideas are still waiting. Drives the subtle "Filing…" affordance.
     private(set) var pendingCount = 0
 
-    init(context: ModelContext, intelligence: (any IdeaIntelligence)? = nil) {
+    init(
+        context: ModelContext,
+        intelligence: (any IdeaIntelligence)? = nil,
+        embeddings: EmbeddingService = EmbeddingService()
+    ) {
         self.context = context
+        self.embeddings = embeddings
         self.intelligence = intelligence ?? LayeredIntelligence(providers: [
             FoundationModelsIntelligence(),
             HeuristicIntelligence(),
@@ -128,6 +134,12 @@ final class EnrichmentService {
                 named: enrichment.categoryName,
                 symbol: enrichment.categorySymbol
             )
+        }
+
+        // Computed here, while the title is fresh, so the connection engine never has to
+        // stop and embed a backlog before it can rank anything.
+        if let vector = embeddings.vector(for: idea) {
+            idea.embedding = VectorCodec.encode(vector)
         }
 
         idea.isEnriched = true

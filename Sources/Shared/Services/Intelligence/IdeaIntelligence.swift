@@ -30,6 +30,40 @@ struct IdeaEnrichment: Equatable, Sendable {
     var estimatedMinutes: Int
 }
 
+/// A flattened, `Sendable` view of an idea.
+///
+/// SwiftData models are not `Sendable` and are bound to their context, so the intelligence
+/// layer is handed snapshots instead. It keeps the providers pure and free of any
+/// knowledge of persistence.
+struct IdeaSummary: Sendable, Identifiable, Equatable {
+    var id: UUID
+    var title: String
+    var excerpt: String
+
+    init(id: UUID, title: String, excerpt: String) {
+        self.id = id
+        self.title = title
+        self.excerpt = excerpt
+    }
+
+    init(_ idea: Idea, excerptLimit: Int = 220) {
+        self.id = idea.id
+        self.title = idea.displayTitle
+        let body = idea.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.excerpt = body.count <= excerptLimit ? body : String(body.prefix(excerptLimit)) + "…"
+    }
+}
+
+/// A connection the model believes exists, before it is written to the store.
+struct ProposedLink: Sendable, Equatable {
+    var targetID: UUID
+    var kind: LinkKind
+    /// One sentence saying *why*. Shown verbatim in the UI — a link without a convincing
+    /// reason is worse than no link, because it teaches the user not to trust the feature.
+    var rationale: String
+    var strength: Double
+}
+
 protocol IdeaIntelligence: Sendable {
 
     /// Whether this implementation can currently do anything useful. A provider that
@@ -41,6 +75,13 @@ protocol IdeaIntelligence: Sendable {
     var displayName: String { get }
 
     func enrich(text: String, existingCategories: [String]) async throws -> IdeaEnrichment
+
+    /// Decides which of the shortlisted candidates genuinely relate to `source`, and says
+    /// why. Returning an empty array is a valid and common answer.
+    func judgeConnections(
+        source: IdeaSummary,
+        candidates: [IdeaSummary]
+    ) async throws -> [ProposedLink]
 }
 
 enum IntelligenceError: Error {
@@ -76,6 +117,24 @@ struct LayeredIntelligence: IdeaIntelligence {
         for provider in providers where provider.isAvailable {
             do {
                 return try await provider.enrich(text: text, existingCategories: existingCategories)
+            } catch {
+                lastError = error
+                continue
+            }
+        }
+
+        throw lastError
+    }
+
+    func judgeConnections(
+        source: IdeaSummary,
+        candidates: [IdeaSummary]
+    ) async throws -> [ProposedLink] {
+        var lastError: Error = IntelligenceError.unavailable
+
+        for provider in providers where provider.isAvailable {
+            do {
+                return try await provider.judgeConnections(source: source, candidates: candidates)
             } catch {
                 lastError = error
                 continue

@@ -34,6 +34,32 @@ struct HeuristicIntelligence: IdeaIntelligence {
         )
     }
 
+    /// Without a language model there is no way to say *why* two ideas connect, and an
+    /// invented reason would be worse than none. So this reports only what it can actually
+    /// justify — the specific words the two ideas share — and only for the strongest
+    /// candidate, which the recall stage already ranked first.
+    func judgeConnections(
+        source: IdeaSummary,
+        candidates: [IdeaSummary]
+    ) async throws -> [ProposedLink] {
+        guard let best = candidates.first else { return [] }
+
+        let sourceWords = Similarity.significantWords(in: "\(source.title) \(source.excerpt)")
+        let targetWords = Similarity.significantWords(in: "\(best.title) \(best.excerpt)")
+        let shared = sourceWords.intersection(targetWords).sorted().prefix(3)
+
+        guard shared.count >= 2 else { return [] }
+
+        return [
+            ProposedLink(
+                targetID: best.id,
+                kind: .relatesTo,
+                rationale: "Both mention \(ListFormatter.localizedString(byJoining: Array(shared))).",
+                strength: Similarity.jaccard(sourceWords, targetWords)
+            )
+        ]
+    }
+
     // MARK: - Task detection
 
     /// Openers that reliably mean "chore", not "idea". Kept deliberately narrow: a false

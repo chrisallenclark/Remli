@@ -138,6 +138,98 @@ struct FoundationModelsIntelligence: IdeaIntelligence {
         return prompt
     }
 
+    // MARK: - Connections
+
+    @Generable
+    private struct LinkDraft {
+
+        @Guide(description: "The number of the related idea, taken from the numbered list.", .range(1...12))
+        var ideaNumber: Int
+
+        @Guide(description: "How the new idea relates to that one.", .anyOf([
+            "relatesTo", "buildsOn", "prerequisiteFor", "variantOf", "contradicts",
+        ]))
+        var relationship: String
+
+        @Guide(description: "One sentence, at most twenty words, naming the specific thing the two share. Refer to concrete details from both. Never say they are 'related' or 'similar' without saying how.")
+        var reason: String
+
+        @Guide(description: "1 means a tenuous stretch, 5 means they are obviously the same thread of thinking.", .range(1...5))
+        var strength: Int
+    }
+
+    @Generable
+    private struct LinkJudgement {
+        @Guide(description: "Only genuinely meaningful connections. Most pairs of ideas are unrelated, so returning an empty list is normal and correct.", .maximumCount(4))
+        var links: [LinkDraft]
+    }
+
+    private static let connectionInstructions = """
+        You find real relationships between someone's captured ideas.
+
+        You are strict. A shared topic is not a relationship. Two ideas are connected only \
+        if knowing one would genuinely change how the person thinks about or acts on the \
+        other. When in doubt, leave it out — a wrong connection costs far more trust than \
+        a missed one.
+
+        Relationship meanings:
+        - prerequisiteFor: the new idea must happen before the other one can
+        - buildsOn: the new idea extends or elaborates the other
+        - variantOf: another approach to the same underlying goal
+        - contradicts: acting on both is inconsistent
+        - relatesTo: genuinely same territory, but none of the above
+        """
+
+    func judgeConnections(
+        source: IdeaSummary,
+        candidates: [IdeaSummary]
+    ) async throws -> [ProposedLink] {
+        guard isAvailable else { throw IntelligenceError.unavailable }
+        guard !candidates.isEmpty else { return [] }
+
+        let shortlist = Array(candidates.prefix(12))
+
+        var prompt = "New idea:\n\(source.title)\n\(source.excerpt)\n\nExisting ideas:\n"
+        for (offset, candidate) in shortlist.enumerated() {
+            prompt += "\(offset + 1). \(candidate.title) — \(candidate.excerpt)\n"
+        }
+
+        let session = LanguageModelSession(instructions: Self.connectionInstructions)
+        let response = try await session.respond(
+            to: prompt,
+            generating: LinkJudgement.self,
+            options: GenerationOptions(temperature: 0.2)
+        )
+
+        var seen = Set<UUID>()
+        var results: [ProposedLink] = []
+
+        for draft in response.content.links {
+            // The range guide constrains this to 1...12, but the shortlist may be
+            // shorter than twelve, so the bound still has to be checked.
+            let index = draft.ideaNumber - 1
+            guard shortlist.indices.contains(index) else { continue }
+
+            let target = shortlist[index]
+            guard seen.insert(target.id).inserted else { continue }
+
+            let reason = draft.reason.trimmingCharacters(in: .whitespacesAndNewlines)
+            // A link whose explanation is missing or vacuous is not worth showing.
+            guard reason.count >= 12 else { continue }
+
+            results.append(
+                ProposedLink(
+                    targetID: target.id,
+                    kind: LinkKind(rawValue: draft.relationship) ?? .relatesTo,
+                    rationale: reason,
+                    strength: (Double(draft.strength) - 1) / 4
+                )
+            )
+        }
+
+        return results
+    }
+
     /// Warms the model so the first real enrichment isn't paying for cold start.
     /// Called when the capture sheet opens, since a capture almost always follows.
     static func prewarm() {
