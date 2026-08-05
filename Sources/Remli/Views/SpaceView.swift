@@ -105,25 +105,38 @@ struct SpaceView: View {
         .ignoresSafeArea()
     }
 
+    /// The banner. Carries the Space's picture when there is one, and is the only place the
+    /// picture can be set — putting the control on the thing it changes means there is no
+    /// settings screen to go and find.
     private var header: some View {
-        VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-            Image(systemName: space.symbolName)
-                .font(.system(size: 26, weight: .light))
-                .foregroundStyle(accent)
-                .padding(.bottom, Theme.Space.xxs)
+        ZStack(alignment: .bottomLeading) {
+            SpaceCover(space: space)
 
-            Text(space.name)
-                .font(Theme.Typography.display)
-                .foregroundStyle(Theme.Palette.ink)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 2) {
+                Image(systemName: space.symbolName)
+                    .font(.system(size: 22, weight: .light))
+                    .foregroundStyle(.white.opacity(0.92))
+                    .padding(.bottom, Theme.Space.xxs)
 
-            Text(summary)
-                .font(Theme.Typography.meta)
-                .foregroundStyle(Theme.Palette.inkMuted)
+                Text(space.name)
+                    .font(Theme.Typography.display)
+                    .foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(summary)
+                    .font(Theme.Typography.meta)
+                    .foregroundStyle(.white.opacity(0.78))
+            }
+            .padding(Theme.Space.md)
+            .shadow(color: .black.opacity(0.5), radius: 8, y: 1)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, Theme.Space.md)
-        .padding(.bottom, Theme.Space.sm)
+        .overlay(alignment: .topTrailing) {
+            SpaceCoverPicker(space: space)
+                .padding(Theme.Space.sm)
+        }
+        .frame(height: 210)
+        .padding(.top, Theme.Space.xs)
+        .padding(.bottom, Theme.Space.xs)
     }
 
     private var summary: String {

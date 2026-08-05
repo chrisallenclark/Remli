@@ -60,6 +60,20 @@ final class IdeaCategory {
     /// keeps its current behaviour after the migration.
     var isUserOwned: Bool = false
 
+    /// A picture the person chose for this Space, already downscaled and JPEG-encoded.
+    ///
+    /// `.externalStorage` keeps the bytes out of the SQLite row and, under CloudKit, turns
+    /// them into a `CKAsset` rather than bloating every fetch of a Space's name. Images are
+    /// resized to at most 900pt on the long edge before they get here — a full-resolution
+    /// photo is around 4 MB and would make sync miserable for no visible benefit at the
+    /// size these are drawn.
+    ///
+    /// Nil is the normal case and renders a generated gradient instead. Remli cannot ship
+    /// photography that matches a Space it has never heard of, so the choice belongs to
+    /// whoever named it.
+    @Attribute(.externalStorage)
+    var coverImageData: Data?
+
     init(
         name: String,
         colorHex: String? = nil,

@@ -8,10 +8,10 @@ import SwiftUI
 /// large, coloured tiles rather than another list. A Space should be recognisable before
 /// you read its name.
 ///
-/// The tiles are generated, not photographed. Real imagery would look better for the six
-/// Spaces someone might name today and fall apart on the seventh, because there is no
-/// picture for "Hybrid Performance" that the app can know about. A gradient built from the
-/// Space's own colour is always right, always distinct, and costs nothing to sync.
+/// A tile shows a picture if the person chose one and a generated gradient otherwise —
+/// Remli cannot ship photography for a Space it has never heard of, so the choice belongs
+/// to whoever named it. Either way the same treatment goes over the top (see `SpaceCover`),
+/// which is what keeps a grid of wildly different photographs looking like one app.
 struct SpacesView: View {
 
     @Query(sort: \IdeaCategory.name)
@@ -161,10 +161,6 @@ struct SpacesView: View {
 private struct SpaceTile: View {
     let space: IdeaCategory
 
-    private var accent: Color {
-        Color(hex: space.colorHex) ?? Theme.Palette.ember
-    }
-
     private var subtitle: String {
         let count = space.totalIdeaCount
         return "\(count) \(count == 1 ? "idea" : "ideas")"
@@ -172,31 +168,7 @@ private struct SpaceTile: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            // Two gradients: a diagonal wash for depth, and a soft bloom in the top corner
-            // so the tile looks lit from somewhere rather than merely filled.
-            RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [accent.opacity(0.55), accent.opacity(0.16)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
-                        .fill(
-                            RadialGradient(
-                                colors: [.white.opacity(0.18), .clear],
-                                center: .topTrailing,
-                                startRadius: 0,
-                                endRadius: 140
-                            )
-                        )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
-                        .strokeBorder(.white.opacity(0.10), lineWidth: 0.5)
-                )
+            SpaceCover(space: space)
 
             VStack(alignment: .leading, spacing: 2) {
                 Image(systemName: space.symbolName)
@@ -213,9 +185,12 @@ private struct SpaceTile: View {
 
                 Text(subtitle)
                     .font(Theme.Typography.meta)
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(.white.opacity(0.72))
             }
             .padding(Theme.Space.sm)
+            // Type sits over an unknown photograph, so it carries its own shadow rather
+            // than trusting the darkening ramp alone.
+            .shadow(color: .black.opacity(0.5), radius: 8, y: 1)
         }
         .frame(height: 150)
     }
