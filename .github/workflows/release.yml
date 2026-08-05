@@ -24,13 +24,16 @@ on:
         description: "What's new in this build (shown to testers)"
         required: false
         default: "Automated build"
-  # Pushing a `build-*` tag ships whatever that tag points at. `workflow_dispatch` is a
-  # button a human presses; this is the same thing over plain git, which is the only
-  # channel available from a machine that cannot press it. The result tags this workflow
-  # publishes are `rel-*`, so they cannot re-trigger it.
+  # `workflow_dispatch` is a button a human presses. This development environment can
+  # neither press it (the app token has no `actions: write`) nor push a tag (the git proxy
+  # allows only the working branch), so the trigger has to be an ordinary commit: changing
+  # the `.release` marker file ships whatever that commit contains. Scoped to a path so
+  # normal commits don't burn a signing run.
   push:
-    tags:
-      - "build-*"
+    branches:
+      - "claude/**"
+    paths:
+      - ".release"
 
 concurrency:
   group: release
