@@ -51,6 +51,17 @@ struct MapView: View {
         }
         .navigationTitle("Map")
         .navigationBarTitleDisplayMode(.inline)
+        // Opening the Map always shows everything.
+        //
+        // Panning and zooming used to persist across visits, on the theory that returning
+        // to where you left off is respectful. In practice it means one stray pinch leaves
+        // the tab looking empty forever, and the way out — a small button in the corner —
+        // is the last thing anyone finds. Framing the whole graph on arrival costs a
+        // gesture to get back to a detail, and saves ever landing on a blank screen.
+        .onAppear {
+            hasAdjusted = false
+            fitToContent()
+        }
         .task(id: ideas.count) { await rebuild() }
         .sheet(item: Binding(
             get: { selection.map(IdentifiableID.init) },
@@ -278,7 +289,10 @@ struct MapView: View {
         committedPan = .zero
     }
 
-    static let minZoom: CGFloat = 0.3
+    /// Low enough that a pinch can always reach "everything on screen", even on a small
+    /// phone with a wide graph. The previous floor of 0.3 was above what some layouts
+    /// needed, so zooming out simply stopped before the ideas came into view.
+    static let minZoom: CGFloat = 0.12
     static let maxZoom: CGFloat = 4
 
     /// Above this many nodes, labels are drawn only when zoomed in. Below it, every idea is

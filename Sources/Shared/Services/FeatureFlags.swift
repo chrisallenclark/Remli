@@ -35,12 +35,9 @@ final class FeatureFlags {
         set { defaults.set(newValue, forKey: Key.proposeConnections) }
     }
 
-    /// Phase 4 — the immersive Space view, with its own ground colour and its Collections.
-    /// Off means Spaces remain filter chips over the one list.
-    var spaceEnvironments: Bool {
-        get { defaults.bool(forKey: Key.spaceEnvironments) }
-        set { defaults.set(newValue, forKey: Key.spaceEnvironments) }
-    }
+    // Phase 4's `spaceEnvironments` flag lived here and has been removed: the Space view
+    // shipped, so the flag guarded nothing and only offered a way to turn a finished
+    // feature off. A flag that outlives its work is a second code path nobody tests.
 
     /// Phase 6 — clustered Map with focus mode. Off keeps the force-directed graph that is
     /// on your phone today, which stays the fallback until the new one is verified on a
@@ -54,7 +51,6 @@ final class FeatureFlags {
     /// unusable and reinstalling would cost the local store.
     func resetAll() {
         proposeConnections = false
-        spaceEnvironments = false
         clusteredMap = false
     }
 
@@ -64,7 +60,6 @@ final class FeatureFlags {
     /// the same defaults domain.
     private enum Key {
         static let proposeConnections = "remli.flag.proposeConnections"
-        static let spaceEnvironments = "remli.flag.spaceEnvironments"
         static let clusteredMap = "remli.flag.clusteredMap"
     }
 }

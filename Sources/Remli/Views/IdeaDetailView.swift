@@ -11,6 +11,12 @@ struct IdeaDetailView: View {
     @State private var isEditing = false
     @State private var isMovingToSpace = false
 
+    /// The text as it was when this screen opened, so an edit can be detected on the way
+    /// out without watching every keystroke.
+    @State private var textWhenOpened: String?
+
+    private let embeddings = EmbeddingService()
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Space.lg) {
@@ -88,6 +94,32 @@ struct IdeaDetailView: View {
         .sheet(isPresented: $isMovingToSpace) {
             SpacePickerView(idea: idea)
         }
+        .onAppear { textWhenOpened = idea.text }
+        .onDisappear(perform: reindexIfEdited)
+    }
+
+    /// Recomputes the search vector when the text has actually changed.
+    ///
+    /// The embedding is written once during enrichment and was never touched again, so an
+    /// idea you rewrote last week was still being found — or not found — on the strength of
+    /// what it used to say. Nothing visibly broke, which is what made it worth fixing:
+    /// semantic search quietly drifted away from the words on the screen.
+    ///
+    /// Done on the way out rather than per keystroke. `NLEmbedding` is on-device and fast,
+    /// but it is not free, and the only moment the result matters is after the edit is
+    /// finished.
+    private func reindexIfEdited() {
+        guard let before = textWhenOpened, before != idea.text else { return }
+
+        if let vector = embeddings.vector(for: idea) {
+            idea.embedding = VectorCodec.encode(vector)
+        } else {
+            // No vector available on this device — better to drop the stale one than to
+            // keep matching against text that no longer exists. Literal search still works.
+            idea.embedding = nil
+        }
+
+        textWhenOpened = idea.text
     }
 
     private var header: some View {

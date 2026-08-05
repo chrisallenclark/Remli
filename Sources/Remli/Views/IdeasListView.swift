@@ -35,6 +35,31 @@ struct IdeasListView: View {
         return searchHits.compactMap { byID[$0.id] }
     }
 
+    /// The Space behind the selected chip, when the selection is a Space rather than a
+    /// Collection or one of the fixed views. Resolved through an idea because the chips
+    /// carry only an id and a name.
+    private var selectedSpace: IdeaCategory? {
+        guard case .category(let id, _, let isCollection) = collection, !isCollection else {
+            return nil
+        }
+        for idea in ideas {
+            if let place = idea.category {
+                if place.id == id { return place }
+                if let parent = place.parent, parent.id == id { return parent }
+            }
+        }
+        return nil
+    }
+
+    /// Why each result is in the list, keyed by idea. Empty when not searching.
+    private var reasonsByID: [UUID: IdeaSearch.MatchReason] {
+        var result: [UUID: IdeaSearch.MatchReason] = [:]
+        for hit in searchHits {
+            result[hit.id] = hit.reason
+        }
+        return result
+    }
+
     var body: some View {
         Group {
             if ideas.isEmpty {
@@ -55,6 +80,18 @@ struct IdeasListView: View {
                     CollectionChips(collections: collections, selection: $collection)
                 }
 
+                // The way into a Space, offered only once you have picked one. Putting a
+                // permanent list of Spaces above every idea would make the first screen
+                // about organisation, when it should be about what you thought.
+                if let space = selectedSpace {
+                    NavigationLink {
+                        SpaceView(space: space)
+                    } label: {
+                        EnterSpaceCard(space: space)
+                    }
+                    .buttonStyle(.plain)
+                }
+
                 if visibleIdeas.isEmpty {
                     NoResultsView(query: query, collection: collection)
                         .padding(.top, Theme.Space.xl)
@@ -63,7 +100,17 @@ struct IdeasListView: View {
                         NavigationLink {
                             IdeaDetailView(idea: idea)
                         } label: {
-                            IdeaRowView(idea: idea)
+                            VStack(alignment: .leading, spacing: 2) {
+                                IdeaRowView(idea: idea)
+
+                                // Only while searching. A result found by meaning shares
+                                // none of your words, which looks like a bug until the row
+                                // says so — and knowing *how* something matched is the
+                                // quickest way to tell a real hit from a lucky one.
+                                if let reason = reasonsByID[idea.id] {
+                                    MatchReasonLabel(reason: reason)
+                                }
+                            }
                         }
                         .buttonStyle(.plain)
                         .contextMenu {
@@ -104,6 +151,68 @@ struct IdeasListView: View {
         let documents = ideas.map(IdeaSearch.Document.init)
         let vector = embeddings.vector(for: trimmed)
         searchHits = IdeaSearch.rank(query: trimmed, in: documents, queryVector: vector)
+    }
+}
+
+/// The doorway into a Space, shown above the filtered list.
+private struct EnterSpaceCard: View {
+    let space: IdeaCategory
+
+    private var accent: Color {
+        Color(hex: space.colorHex) ?? Theme.Palette.ember
+    }
+
+    var body: some View {
+        HStack(spacing: Theme.Space.sm) {
+            Image(systemName: space.symbolName)
+                .font(.system(size: 16, weight: .light))
+                .foregroundStyle(accent)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Enter \(space.name)")
+                    .font(Theme.Typography.control)
+                    .foregroundStyle(Theme.Palette.ink)
+
+                Text(space.sortedChildren.isEmpty
+                     ? "See this Space on its own"
+                     : "\(space.sortedChildren.count) collections inside")
+                    .font(Theme.Typography.meta)
+                    .foregroundStyle(Theme.Palette.inkMuted)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Theme.Palette.inkMuted)
+        }
+        .padding(Theme.Space.sm)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+                .fill(accent.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+                .strokeBorder(accent.opacity(0.22), lineWidth: 0.5)
+        )
+        .padding(.bottom, Theme.Space.xxs)
+    }
+}
+
+/// A one-line note under a search result saying how it was found.
+private struct MatchReasonLabel: View {
+    let reason: IdeaSearch.MatchReason
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: reason.symbolName)
+                .font(.system(size: 9, weight: .medium))
+            Text(reason.label)
+                .font(Theme.Typography.meta)
+        }
+        .foregroundStyle(Theme.Palette.inkMuted)
+        .padding(.leading, Theme.Space.xs)
+        .padding(.bottom, Theme.Space.xxs)
     }
 }
 

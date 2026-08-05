@@ -126,6 +126,34 @@ enum GraphLayout {
             temperature = max(temperature * 0.95, 0.5)
         }
 
+        // Rescale so the result always occupies `area`, whatever the simulation settled on.
+        //
+        // Without this the spread is emergent: a handful of unconnected ideas repel until
+        // they are thousands of points apart, a dense cluster collapses into a few hundred,
+        // and the view is left trying to compensate with zoom limits it has to guess at.
+        // Every attempt to fix the map by adjusting those limits failed for this reason —
+        // there is no single clamp that suits both cases.
+        //
+        // Normalising moves the problem to where it can be solved exactly: the map now
+        // knows the graph is always 1000×1000, so showing all of it is arithmetic rather
+        // than a heuristic. Relative distances are preserved, which is the only thing the
+        // layout was ever really claiming.
+        let settled = bounds(of: points)
+        let spread = max(settled.width, settled.height)
+        if spread > 0.01 {
+            let target = min(area.width, area.height)
+            let scale = target / spread
+            let centre = CGPoint(x: area.width / 2, y: area.height / 2)
+            let settledCentre = CGPoint(x: settled.midX, y: settled.midY)
+
+            for index in points.indices {
+                points[index] = CGPoint(
+                    x: (points[index].x - settledCentre.x) * scale + centre.x,
+                    y: (points[index].y - settledCentre.y) * scale + centre.y
+                )
+            }
+        }
+
         for (index, id) in ids.enumerated() {
             positions[id] = points[index]
         }
