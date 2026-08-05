@@ -46,6 +46,8 @@ struct IdeaDetailView: View {
 
                 ConnectionsSection(idea: idea)
 
+                RoadmapPreview(idea: idea)
+
                 statusControl
 
                 Spacer(minLength: Theme.Space.xxl)

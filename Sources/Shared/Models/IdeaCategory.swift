@@ -74,6 +74,10 @@ final class IdeaCategory {
     @Attribute(.externalStorage)
     var coverImageData: Data?
 
+    /// A built-in cover, when no photo was chosen. Stored as the preset's id rather than
+    /// its colours so the art can be redrawn later without migrating anyone's Spaces.
+    var coverPresetID: String?
+
     init(
         name: String,
         colorHex: String? = nil,

@@ -3,10 +3,15 @@ import SwiftUI
 
 /// The app shell.
 ///
-/// Four tabs, each earning its place: the list is where ideas live, the map shows them as
-/// a whole, Roadmaps finds something to start on, and Review is the deliberate weekly
-/// sit-down. Capture is a floating action rather than a tab, because it has to be
-/// reachable from anywhere without a mode change.
+/// Four tabs, each earning its place: Ideas is everything you have thought, Spaces is what
+/// you are working on, Map shows the whole library at once, and Roadmaps finds something to
+/// start on. Capture is a floating action rather than a tab, because it has to be reachable
+/// from anywhere without a mode change.
+///
+/// Review sits in the toolbar rather than the tab bar. It is a deliberate sit-down you do
+/// occasionally, not somewhere you navigate to between thoughts, and a tab bar should hold
+/// the places you move *between* — spending a fifth of it on a weekly ritual crowds out
+/// Spaces, which you touch constantly.
 struct RootView: View {
 
     var storeIsEphemeral: Bool = false
@@ -16,6 +21,7 @@ struct RootView: View {
 
     @State private var isCapturing = false
     @State private var isShowingSettings = false
+    @State private var isShowingReview = false
 
     /// Set by the widget / Action Button / Siri route, which open with the mic already hot.
     @State private var captureStartsWithVoice = false
@@ -38,10 +44,10 @@ struct RootView: View {
                         .navigationBarTitleDisplayMode(.large)
                         .toolbar {
                             ToolbarItem(placement: .topBarTrailing) {
-                                NavigationLink {
-                                    SpacesView()
+                                Button {
+                                    isShowingReview = true
                                 } label: {
-                                    Image(systemName: "square.grid.2x2")
+                                    Image(systemName: "calendar.day.timeline.left")
                                 }
                             }
 
@@ -62,6 +68,10 @@ struct RootView: View {
                 }
             }
 
+            Tab("Spaces", systemImage: "square.grid.2x2") {
+                NavigationStack { SpacesView() }
+            }
+
             Tab("Map", systemImage: "point.3.filled.connected.trianglepath.dotted") {
                 NavigationStack { MapView() }
             }
@@ -70,9 +80,6 @@ struct RootView: View {
                 NavigationStack { RoadmapsView() }
             }
 
-            Tab("Review", systemImage: "calendar.day.timeline.left") {
-                NavigationStack { ReviewView(coordinator: coordinator) }
-            }
         }
         .sheet(isPresented: $isCapturing, onDismiss: runBacklog) {
             CaptureSheet(autoStartVoice: captureStartsWithVoice)
@@ -85,6 +92,11 @@ struct RootView: View {
         .sheet(isPresented: $isShowingSettings) {
             if let coordinator {
                 SettingsView(store: settingsStore, coordinator: coordinator)
+            }
+        }
+        .sheet(isPresented: $isShowingReview) {
+            NavigationStack {
+                ReviewView(coordinator: coordinator)
             }
         }
         // A tapped notification opens the idea it was about. Landing on a generic list

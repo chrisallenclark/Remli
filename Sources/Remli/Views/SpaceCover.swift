@@ -27,6 +27,15 @@ struct SpaceCover: View {
         space.coverImageData.flatMap(UIImage.init(data:))
     }
 
+    private var hasPreset: Bool {
+        SpaceCoverPreset.preset(id: space.coverPresetID) != nil
+    }
+
+    private var washOpacity: Double {
+        if image != nil { return 0.28 }
+        return hasPreset ? 0.06 : 0.10
+    }
+
     var body: some View {
         ZStack {
             if let image {
@@ -38,9 +47,13 @@ struct SpaceCover: View {
                     // common one is most of what makes the set feel deliberate.
                     .saturation(0.78)
                     .brightness(-0.06)
+            } else if let preset = SpaceCoverPreset.preset(id: space.coverPresetID) {
+                SpaceCoverPresetArt(preset: preset)
             } else {
-                // No photo: the generated fallback. Two gradients rather than one so it
-                // reads as a material with a light source, not a filled rectangle.
+                // Neither a photo nor a chosen cover: the Space's own colour. Two gradients
+                // rather than one so it reads as a material with a light source rather than
+                // a filled rectangle — a Space nobody has decorated must still look
+                // finished.
                 LinearGradient(
                     colors: [accent.opacity(0.62), accent.opacity(0.18)],
                     startPoint: .topLeading,
@@ -48,13 +61,15 @@ struct SpaceCover: View {
                 )
             }
 
-            // The wash. What makes a Space recognisably itself before you read the name.
-            accent.opacity(image == nil ? 0.10 : 0.28)
+            // The wash. What makes a Space recognisably itself before you read the name —
+            // heaviest over a photograph, which arrived with no allegiance to this Space,
+            // and lightest over a designed cover, which was drawn for it.
+            accent.opacity(washOpacity)
                 .blendMode(.plusDarker)
 
             // A bloom in the top corner, so every tile is lit from the same direction.
             RadialGradient(
-                colors: [.white.opacity(image == nil ? 0.18 : 0.12), .clear],
+                colors: [.white.opacity(image == nil ? 0.14 : 0.12), .clear],
                 center: .topTrailing,
                 startRadius: 0,
                 endRadius: 180
@@ -83,14 +98,40 @@ struct SpaceCover: View {
     }
 }
 
-/// Picks and stores a Space's picture.
-///
-/// Downscaling happens here rather than at render: a phone photo is around 4 MB, and every
-/// one of those would sync through the person's iCloud and be re-decoded on each scroll of
-/// the Spaces grid, to be drawn at 150 points.
+/// The button that opens the cover chooser.
 struct SpaceCoverPicker: View {
 
     @Bindable var space: IdeaCategory
+    @State private var isChoosing = false
+
+    var body: some View {
+        Button {
+            isChoosing = true
+        } label: {
+            Image(systemName: "photo.on.rectangle.angled")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.white.opacity(0.92))
+                .padding(8)
+                .background(Circle().fill(.black.opacity(0.35)))
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $isChoosing) {
+            SpaceCoverChooser(space: space)
+        }
+    }
+}
+
+/// Choosing what a Space looks like.
+///
+/// Your own photo first, because that is the one that will mean something to you, then
+/// thirty built-in covers grouped by the kind of Space they suit. Grouping matters more
+/// than it sounds: thirty ungrouped swatches is a wall to scroll past, whereas "Business"
+/// with three under it is a decision you can make in a second.
+struct SpaceCoverChooser: View {
+
+    @Bindable var space: IdeaCategory
+
+    @Environment(\.dismiss) private var dismiss
 
     @State private var selection: PhotosPickerItem?
 
@@ -98,28 +139,82 @@ struct SpaceCoverPicker: View {
     /// largest phone at 3× — beyond this is bytes nobody sees.
     private static let maxDimension: CGFloat = 900
 
-    var body: some View {
-        Menu {
-            // The picker has to be inside the menu rather than presented from it: a
-            // PhotosPicker only presents from its own tap.
-            PhotosPicker(selection: $selection, matching: .images, photoLibrary: .shared()) {
-                Label(space.coverImageData == nil ? "Choose a picture" : "Change picture",
-                      systemImage: "photo")
-            }
+    private let columns = [
+        GridItem(.flexible(), spacing: Theme.Space.xs),
+        GridItem(.flexible(), spacing: Theme.Space.xs),
+        GridItem(.flexible(), spacing: Theme.Space.xs),
+    ]
 
-            if space.coverImageData != nil {
-                Button(role: .destructive) {
-                    space.coverImageData = nil
-                } label: {
-                    Label("Remove picture", systemImage: "trash")
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.Space.lg) {
+
+                    VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                        PhotosPicker(selection: $selection, matching: .images, photoLibrary: .shared()) {
+                            Label(
+                                space.coverImageData == nil ? "Choose your own photo" : "Replace photo",
+                                systemImage: "photo"
+                            )
+                            .font(Theme.Typography.control)
+                            .foregroundStyle(Theme.Palette.ember)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, Theme.Space.sm)
+                            .background(
+                                RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+                                    .fill(Theme.Palette.surface)
+                            )
+                        }
+
+                        if space.coverImageData != nil || space.coverPresetID != nil {
+                            Button(role: .destructive) {
+                                space.coverImageData = nil
+                                space.coverPresetID = nil
+                            } label: {
+                                Text("Use the Space's colour instead")
+                                    .font(Theme.Typography.meta)
+                            }
+                        }
+                    }
+
+                    ForEach(SpaceCoverPreset.grouped(), id: \.group) { entry in
+                        VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                            Text(entry.group.rawValue.uppercased())
+                                .font(Theme.Typography.sectionLabel)
+                                .foregroundStyle(Theme.Palette.inkMuted)
+                                .tracking(0.6)
+
+                            LazyVGrid(columns: columns, spacing: Theme.Space.xs) {
+                                ForEach(entry.presets) { preset in
+                                    Button {
+                                        // A chosen cover replaces a photo — two sources for
+                                        // one slot would leave the person guessing which
+                                        // one is actually showing.
+                                        space.coverImageData = nil
+                                        space.coverPresetID = preset.id
+                                    } label: {
+                                        PresetSwatch(
+                                            preset: preset,
+                                            isSelected: space.coverPresetID == preset.id
+                                                && space.coverImageData == nil
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(Theme.Space.md)
+            }
+            .background(Theme.Palette.canvas)
+            .navigationTitle("Cover")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
                 }
             }
-        } label: {
-            Image(systemName: "photo.on.rectangle.angled")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.white.opacity(0.92))
-                .padding(8)
-                .background(Circle().fill(.black.opacity(0.35)))
         }
         .task(id: selection) { await load() }
     }
@@ -133,10 +228,14 @@ struct SpaceCoverPicker: View {
         else { return }
 
         space.coverImageData = Self.downscaled(image)
+        space.coverPresetID = nil
         self.selection = nil
     }
 
     /// Resizes to `maxDimension` on the long edge and re-encodes as JPEG.
+    ///
+    /// A raw phone photo is around 4 MB. Every one of those would sync through the person's
+    /// iCloud and be re-decoded on each scroll of the Spaces grid, to be drawn at 150 points.
     static func downscaled(_ image: UIImage) -> Data? {
         let longEdge = max(image.size.width, image.size.height)
         let scale = longEdge > maxDimension ? maxDimension / longEdge : 1
@@ -151,5 +250,30 @@ struct SpaceCoverPicker: View {
         // 0.8 is past the point where the difference is visible under a colour wash and a
         // darkening ramp, and roughly a fifth of the bytes of lossless.
         return rendered.jpegData(compressionQuality: 0.8)
+    }
+}
+
+private struct PresetSwatch: View {
+    let preset: SpaceCoverPreset
+    let isSelected: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            SpaceCoverPresetArt(preset: preset)
+                .frame(height: 74)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+                        .strokeBorder(
+                            isSelected ? Theme.Palette.ember : .white.opacity(0.12),
+                            lineWidth: isSelected ? 2 : 0.5
+                        )
+                )
+
+            Text(preset.name)
+                .font(Theme.Typography.meta)
+                .foregroundStyle(isSelected ? Theme.Palette.ember : Theme.Palette.inkMuted)
+                .lineLimit(1)
+        }
     }
 }

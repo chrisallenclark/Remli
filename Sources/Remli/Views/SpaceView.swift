@@ -61,6 +61,10 @@ struct SpaceView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: Theme.Space.sm) {
                 header
+                    // Deliberately outside the horizontal padding below: the cover runs to
+                    // the edges and under the status bar, so entering a Space feels like
+                    // arriving somewhere rather than opening another list.
+                    .padding(.horizontal, -Theme.Space.md)
 
                 if !collections.isEmpty {
                     collectionChips
@@ -84,8 +88,10 @@ struct SpaceView: View {
             .padding(.horizontal, Theme.Space.md)
         }
         .background(ground)
+        .ignoresSafeArea(edges: .top)
         .navigationTitle(space.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
     }
 
     // MARK: - The environment
@@ -110,7 +116,7 @@ struct SpaceView: View {
     /// settings screen to go and find.
     private var header: some View {
         ZStack(alignment: .bottomLeading) {
-            SpaceCover(space: space)
+            SpaceCover(space: space, cornerRadius: 0)
 
             VStack(alignment: .leading, spacing: 2) {
                 Image(systemName: space.symbolName)
@@ -134,8 +140,7 @@ struct SpaceView: View {
             SpaceCoverPicker(space: space)
                 .padding(Theme.Space.sm)
         }
-        .frame(height: 210)
-        .padding(.top, Theme.Space.xs)
+        .frame(height: 260)
         .padding(.bottom, Theme.Space.xs)
     }
 
