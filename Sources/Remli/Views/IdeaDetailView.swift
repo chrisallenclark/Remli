@@ -10,6 +10,7 @@ struct IdeaDetailView: View {
 
     @State private var isEditing = false
     @State private var isMovingToSpace = false
+    @State private var isWorking = false
 
     /// The text as it was when this screen opened, so an edit can be detected on the way
     /// out without watching every keystroke.
@@ -42,6 +43,26 @@ struct IdeaDetailView: View {
 
                 if !idea.tags.isEmpty {
                     TagRow(tags: idea.tags)
+                }
+
+                // The one action on this screen that changes the idea rather than describing
+                // it. Given prominence accordingly — everything else here is reading.
+                if idea.kind == .idea {
+                    Button {
+                        isWorking = true
+                    } label: {
+                        HStack(spacing: Theme.Space.xs) {
+                            Image(systemName: "hammer")
+                                .font(.system(size: 14, weight: .medium))
+                            Text("Work on this")
+                                .font(Theme.Typography.control)
+                        }
+                        .foregroundStyle(Theme.Palette.canvas)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Space.sm)
+                        .background(Capsule().fill(Theme.Palette.ember))
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 ConnectionsSection(idea: idea)
@@ -106,6 +127,9 @@ struct IdeaDetailView: View {
         }
         .sheet(isPresented: $isMovingToSpace) {
             SpacePickerView(idea: idea)
+        }
+        .sheet(isPresented: $isWorking) {
+            WorkshopView(idea: idea)
         }
         .onAppear { textWhenOpened = idea.text }
         .onDisappear(perform: reindexIfEdited)

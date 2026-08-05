@@ -19,6 +19,9 @@ struct ReviewView: View {
 
     @Environment(\.dismiss) private var dismiss
 
+    /// The idea offered as today's candidate, opened straight into a working session.
+    @State private var working: Idea?
+
     private var liveIdeas: [Idea] {
         ideas.filter { $0.status != .done && $0.kind == .idea }
     }
@@ -172,6 +175,10 @@ struct ReviewView: View {
                     LazyVStack(alignment: .leading, spacing: Theme.Space.lg) {
                         header
 
+                        if let candidate = worthRevisiting.first {
+                            candidateCard(candidate)
+                        }
+
                         if !focusItems.isEmpty {
                             focus
                         }
@@ -195,6 +202,9 @@ struct ReviewView: View {
         }
         .navigationTitle("Review")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $working) { idea in
+            WorkshopView(idea: idea)
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Done") { dismiss() }
@@ -230,6 +240,78 @@ struct ReviewView: View {
         case 1: return "One idea this week · \(total)"
         default: return "\(count) ideas this week · \(total)"
         }
+    }
+
+    /// The answer to "I don't know which one to work on".
+    ///
+    /// One idea, not a list. A list is the problem restated — the whole reason this screen
+    /// exists is that seeing everything makes choosing harder. The ranking is the same one
+    /// that drives notifications, so the app never disagrees with itself about what matters.
+    private func candidateCard(_ idea: Idea) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Space.xs) {
+            Text("START HERE")
+                .font(Theme.Typography.sectionLabel)
+                .foregroundStyle(Theme.Palette.ember)
+                .tracking(0.6)
+
+            Text(idea.displayTitle)
+                .font(Theme.Typography.title)
+                .foregroundStyle(Theme.Palette.ink)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(reason(for: idea))
+                .font(Theme.Typography.meta)
+                .foregroundStyle(Theme.Palette.inkMuted)
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: Theme.Space.xs) {
+                Button {
+                    working = idea
+                } label: {
+                    Text("Work on this")
+                        .font(Theme.Typography.control)
+                        .foregroundStyle(Theme.Palette.canvas)
+                        .padding(.horizontal, Theme.Space.md)
+                        .padding(.vertical, 7)
+                        .background(Capsule().fill(Theme.Palette.ember))
+                }
+                .buttonStyle(.plain)
+
+                NavigationLink {
+                    IdeaDetailView(idea: idea)
+                } label: {
+                    Text("Just read it")
+                        .font(Theme.Typography.control)
+                        .foregroundStyle(Theme.Palette.inkMuted)
+                        .padding(.horizontal, Theme.Space.md)
+                        .padding(.vertical, 7)
+                        .background(Capsule().strokeBorder(Theme.Palette.hairline, lineWidth: 0.5))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.top, Theme.Space.xxs)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardBackground()
+    }
+
+    /// Why this one and not another. A recommendation without a reason is an instruction,
+    /// and an instruction from software is easy to resent and impossible to argue with.
+    private func reason(for idea: Idea) -> String {
+        let connections = idea.allLinks.filter(\.isActive).count
+        let days = Calendar.current.dateComponents([.day], from: idea.createdAt, to: .now).day ?? 0
+
+        if connections >= 2 {
+            return "\(connections) of your other ideas connect to this one — more than anything else you have."
+        }
+        if idea.surfaceCount >= 2 {
+            return "You've come back to this \(idea.surfaceCount) times without starting it."
+        }
+        if days >= 30 {
+            return "Captured \(days) days ago and still unstarted."
+        }
+        return "The highest-scoring idea you haven't started."
     }
 
     private var focus: some View {

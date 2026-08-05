@@ -130,4 +130,32 @@ struct HeuristicIntelligence: IdeaIntelligence {
         "something", "anything", "someone", "people", "time", "way", "ways",
         "lot", "bit", "kind", "sort", "today", "tomorrow", "yesterday",
     ]
+    // MARK: - Working an idea forward
+
+    /// With no model available, only the questions are honest.
+    ///
+    /// A heuristic cannot propose a step specific to an idea it does not understand, and a
+    /// generic step — "research the market", "make a plan" — is worse than nothing: it looks
+    /// like help and teaches the person that the feature is filler. Questions do not have
+    /// that problem. They make no claim about the idea, and answering one produces a step
+    /// the person wrote themselves, which was always the better step anyway.
+    func developIdea(_ idea: IdeaSummary, related: [IdeaSummary]) async throws -> IdeaDevelopment {
+        var questions = [
+            "What is the smallest version of this you could put in front of one person this week?",
+            "Who is the first person who would use this, by name?",
+            "What has to be true for this to work — and how would you find out cheaply?",
+        ]
+
+        // The one thing a heuristic genuinely knows: what else is connected. Naming it is
+        // real information rather than a guess dressed up as advice.
+        if let first = related.first {
+            questions.append("Does \(first.title) belong inside this, or is it a separate thing?")
+        }
+
+        return IdeaDevelopment(
+            restatement: idea.title,
+            steps: [],
+            questions: questions
+        )
+    }
 }

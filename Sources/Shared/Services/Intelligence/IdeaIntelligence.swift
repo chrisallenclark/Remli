@@ -64,6 +64,34 @@ struct ProposedLink: Sendable, Equatable {
     var strength: Double
 }
 
+/// One thing you could do next, and why it is worth doing.
+struct DevelopmentStep: Sendable, Equatable, Identifiable {
+    var id = UUID()
+    var title: String
+    /// One sentence. A step without a reason is a chore someone else invented for you.
+    var reason: String
+}
+
+/// What comes back from a working session on a single idea.
+///
+/// Two kinds of output, because they do different jobs. **Steps** are things to do, and are
+/// only as good as the model's guess about your circumstances — it does not know you have
+/// already registered the company. **Questions** make no assumptions at all; they are the
+/// part that survives being wrong about you, and answering one turns it into a step you
+/// wrote yourself.
+struct IdeaDevelopment: Sendable, Equatable {
+
+    /// The idea said back plainly. Ideas are captured at speed, often out loud, and reading
+    /// a clean version of your own thought is the cheapest way to see what it actually was.
+    var restatement: String
+
+    var steps: [DevelopmentStep]
+
+    /// Prompts, not rhetoric. Each should be answerable in a sentence and each answer
+    /// should move the idea forward.
+    var questions: [String]
+}
+
 protocol IdeaIntelligence: Sendable {
 
     /// Whether this implementation can currently do anything useful. A provider that
@@ -82,6 +110,25 @@ protocol IdeaIntelligence: Sendable {
         source: IdeaSummary,
         candidates: [IdeaSummary]
     ) async throws -> [ProposedLink]
+
+    /// Works one idea forward: says it back plainly, proposes steps, and asks the
+    /// questions that would unblock it.
+    ///
+    /// `related` is the person's own material — ideas already linked to this one. Passing
+    /// it is what separates this from asking a chatbot for a project plan: the steps can
+    /// refer to things they have actually thought of.
+    func developIdea(_ idea: IdeaSummary, related: [IdeaSummary]) async throws -> IdeaDevelopment
+}
+
+extension IdeaIntelligence {
+
+    /// Providers that cannot do this yet simply decline, and `LayeredIntelligence` moves on
+    /// to the next one. Adding a capability to the protocol should never break a provider
+    /// that has not implemented it — the layering exists precisely so capabilities can
+    /// arrive unevenly.
+    func developIdea(_ idea: IdeaSummary, related: [IdeaSummary]) async throws -> IdeaDevelopment {
+        throw IntelligenceError.unavailable
+    }
 }
 
 enum IntelligenceError: Error {
@@ -135,6 +182,21 @@ struct LayeredIntelligence: IdeaIntelligence {
         for provider in providers where provider.isAvailable {
             do {
                 return try await provider.judgeConnections(source: source, candidates: candidates)
+            } catch {
+                lastError = error
+                continue
+            }
+        }
+
+        throw lastError
+    }
+
+    func developIdea(_ idea: IdeaSummary, related: [IdeaSummary]) async throws -> IdeaDevelopment {
+        var lastError: Error = IntelligenceError.unavailable
+
+        for provider in providers where provider.isAvailable {
+            do {
+                return try await provider.developIdea(idea, related: related)
             } catch {
                 lastError = error
                 continue

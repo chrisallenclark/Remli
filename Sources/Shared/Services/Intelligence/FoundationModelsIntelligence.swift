@@ -295,4 +295,103 @@ private extension FoundationModelsIntelligence.Draft {
 
         return Array(result.prefix(4))
     }
+    // MARK: - Working an idea forward
+
+    @Generable
+    struct DevelopmentDraft {
+
+        @Guide(description: "The idea said back in one plain sentence. Strip the hedging and the thinking-out-loud, keep the substance. Do not add anything that was not there.")
+        var restatement: String
+
+        @Guide(description: "Concrete things to do next, smallest first. Each must be doable in an afternoon and specific to this idea — never generic advice like 'do market research'.", .maximumCount(5))
+        var steps: [StepDraft]
+
+        @Guide(description: "Questions whose answers would genuinely unblock this. Ask about the things you cannot know: who it is for, what the cheapest test is, what would make it fail. Never ask something the idea already answers.", .maximumCount(3))
+        var questions: [String]
+    }
+
+    @Generable
+    struct StepDraft {
+        @Guide(description: "An action, starting with a verb. Under ten words.")
+        var title: String
+
+        @Guide(description: "One short sentence on why this step comes now rather than later.")
+        var reason: String
+    }
+
+    func developIdea(_ idea: IdeaSummary, related: [IdeaSummary]) async throws -> IdeaDevelopment {
+        guard isAvailable else { throw IntelligenceError.unavailable }
+
+        let session = LanguageModelSession(instructions: Self.developmentInstructions)
+
+        let draft = try await session.respond(
+            to: Self.developmentPrompt(for: idea, related: related),
+            generating: DevelopmentDraft.self,
+            // Warmer than filing. Filing should be repeatable; this should be useful, and
+            // the interesting step is rarely the most probable one.
+            options: GenerationOptions(temperature: 0.7)
+        ).content
+
+        let steps = draft.steps
+            .map { step in
+                DevelopmentStep(
+                    title: step.title.trimmingCharacters(in: .whitespacesAndNewlines),
+                    reason: step.reason.trimmingCharacters(in: .whitespacesAndNewlines)
+                )
+            }
+            .filter { !$0.title.isEmpty }
+
+        let questions = draft.questions
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        let restatement = draft.restatement.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !steps.isEmpty || !questions.isEmpty else {
+            throw IntelligenceError.unusableResult
+        }
+
+        return IdeaDevelopment(
+            restatement: restatement.isEmpty ? idea.title : restatement,
+            steps: steps,
+            questions: questions
+        )
+    }
+
+    private static let developmentInstructions = """
+        You help someone move one of their own ideas forward.
+
+        You are not a consultant and you are not writing a business plan. Everything you \
+        suggest must be small enough to start this week and specific enough that they could \
+        not have written it about any other idea.
+
+        Never suggest research, brainstorming, or "define your goals". Never pad the list — \
+        two real steps beat five vague ones. If their other ideas are relevant, refer to \
+        them by name.
+        """
+
+    private static func developmentPrompt(for idea: IdeaSummary, related: [IdeaSummary]) -> String {
+        var prompt = """
+            The idea:
+            \(idea.title)
+            \(idea.excerpt)
+            """
+
+        if !related.isEmpty {
+            // Their own material. This is the difference between a generic plan and one
+            // that can say "you already thought of this".
+            let list = related.prefix(6)
+                .map { "- \($0.title): \($0.excerpt)" }
+                .joined(separator: "\n")
+
+            prompt += """
+
+
+                Other ideas they have already captured that connect to this one:
+                \(list)
+                """
+        }
+
+        return prompt
+    }
 }
