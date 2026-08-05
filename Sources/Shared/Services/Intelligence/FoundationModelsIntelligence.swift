@@ -295,6 +295,10 @@ private extension FoundationModelsIntelligence.Draft {
 
         return Array(result.prefix(4))
     }
+}
+
+extension FoundationModelsIntelligence {
+
     // MARK: - Working an idea forward
 
     @Generable
