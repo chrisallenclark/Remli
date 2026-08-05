@@ -12,6 +12,11 @@ struct RemliApp: App {
         self.container = result.container
         self.isEphemeral = result.isEphemeral
 
+        // Skipped under test: the app is only acting as a host for the test bundle, and
+        // BGTaskScheduler registration is a launch-time contract that has no meaning in a
+        // process that exists to run assertions and exit.
+        guard !RemliSchema.isRunningTests else { return }
+
         // Background task identifiers must be registered before launch finishes, so this
         // cannot wait for a view to appear. The handler builds its own coordinator rather
         // than capturing one, because no view exists yet at this point.
