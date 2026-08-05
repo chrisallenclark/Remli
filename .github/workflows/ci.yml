@@ -89,15 +89,33 @@ jobs:
       - name: Publish compiler diagnostics
         if: failure()
         run: |
+          # Every command here tolerates missing input.
+          #
+          # This step previously assumed build.log existed, so a failure in an *earlier*
+          # step — project generation, picking a simulator — took the diagnostics down with
+          # it and published nothing. The one case where reading the log matters most is
+          # the one where there is no log, and the branch was left showing a stale sha,
+          # which is worse than empty because it looks current.
+          set +e
           mkdir -p "$RUNNER_TEMP/ci-log"
-          # Both logs, because the failure is now either a compile error or a failing test
-          # and the two look nothing alike.
-          cat "$RUNNER_TEMP/build.log" "$RUNNER_TEMP/test.log" 2>/dev/null \
-            > "$RUNNER_TEMP/all.log" || cp "$RUNNER_TEMP/build.log" "$RUNNER_TEMP/all.log"
-          grep -E "error:|warning:|note:|failed|XCTAssert|✘|\*\* (BUILD|TEST)" "$RUNNER_TEMP/all.log" \
-            | head -200 > "$RUNNER_TEMP/ci-log/errors.txt" || true
-          tail -150 "$RUNNER_TEMP/all.log" > "$RUNNER_TEMP/ci-log/tail.txt" || true
+
+          : > "$RUNNER_TEMP/all.log"
+          for f in build.log test.log; do
+            [ -f "$RUNNER_TEMP/$f" ] && cat "$RUNNER_TEMP/$f" >> "$RUNNER_TEMP/all.log"
+          done
+
+          if [ -s "$RUNNER_TEMP/all.log" ]; then
+            grep -aE "error:|warning:|failed|XCTAssert|✘|\*\* (BUILD|TEST)" "$RUNNER_TEMP/all.log" \
+              | head -200 > "$RUNNER_TEMP/ci-log/errors.txt"
+            tail -150 "$RUNNER_TEMP/all.log" > "$RUNNER_TEMP/ci-log/tail.txt"
+          else
+            echo "No build or test log was produced — the job failed before compiling." \
+              > "$RUNNER_TEMP/ci-log/errors.txt"
+            cp "$RUNNER_TEMP/ci-log/errors.txt" "$RUNNER_TEMP/ci-log/tail.txt"
+          fi
+
           echo "$GITHUB_SHA" > "$RUNNER_TEMP/ci-log/sha.txt"
+          true
 
           cd "$RUNNER_TEMP/ci-log"
           git init -q
@@ -116,7 +134,18 @@ jobs:
       - name: Publish result as a git tag
         if: always()
         run: |
-          outcome=$([ "${{ job.status }}" = "success" ] && echo pass || echo fail)
+          # Cancelled is not failed.
+          #
+          # CI cancels in-progress runs when a newer commit arrives, and `job.status` is
+          # then "cancelled" — which the old `success ? pass : fail` collapsed into a
+          # failure tag. Pushing three commits in a row therefore produced a `ci-fail-`
+          # tag for a run that never reached the compiler, and cost a round of chasing a
+          # build error that did not exist.
+          case "${{ job.status }}" in
+            success)   outcome=pass ;;
+            cancelled) outcome=cancelled ;;
+            *)         outcome=fail ;;
+          esac
           tag="ci-${outcome}-${GITHUB_SHA}"
 
           git config user.name  "github-actions[bot]"

@@ -216,7 +216,18 @@ jobs:
       - name: Publish result as a git tag
         if: always()
         run: |
-          outcome=$([ "${{ job.status }}" = "success" ] && echo pass || echo fail)
+          # Cancelled is not failed.
+          #
+          # CI cancels in-progress runs when a newer commit arrives, and `job.status` is
+          # then "cancelled" — which the old `success ? pass : fail` collapsed into a
+          # failure tag. Pushing three commits in a row therefore produced a `ci-fail-`
+          # tag for a run that never reached the compiler, and cost a round of chasing a
+          # build error that did not exist.
+          case "${{ job.status }}" in
+            success)   outcome=pass ;;
+            cancelled) outcome=cancelled ;;
+            *)         outcome=fail ;;
+          esac
           tag="rel-${outcome}-${GITHUB_SHA}"
 
           git config user.name  "github-actions[bot]"
