@@ -37,4 +37,4 @@ Questions, bugs, or ideas about the app: [open an issue][issues], or email
 
 Remli collects nothing. See the [privacy policy](privacy).
 
-[issues]: https://github.com/chrisallenclark/Cued/issues
+[issues]: https://github.com/chrisallenclark/Remli/issues

@@ -31,13 +31,12 @@ This is purely about build minutes. Private repos only get about 200 free macOS 
 minutes a month; public repos get them free. Your ideas and data never live in this repo —
 only the app's source code — so there's nothing sensitive in it.
 
-1. Go to <https://github.com/chrisallenclark/Cued/settings>
+1. Go to <https://github.com/chrisallenclark/Remli/settings>
 2. Scroll to the very bottom, **Danger Zone** → **Change repository visibility**
 3. Choose **Make public**, confirm.
 
-While you're in Settings, you can also rename the repo to **Remli** if you like
-(**Settings → General → Repository name**). GitHub redirects the old address automatically,
-so nothing breaks.
+(The repo has already been renamed from `Cued` to `Remli`. GitHub redirects the old address
+automatically, so any older link still works.)
 
 ---
 
@@ -66,7 +65,7 @@ This is what lets the build server sign the app and upload it without a Mac.
 ## 4. Add four secrets to GitHub
 
 Go to
-<https://github.com/chrisallenclark/Cued/settings/secrets/actions>
+<https://github.com/chrisallenclark/Remli/settings/secrets/actions>
 and click **New repository secret** four times:
 
 | Secret name | What to paste |
@@ -170,16 +169,14 @@ Switch the dropdown back to **App IDs** → click **Remli** → scroll to **iClo
 The App Store requires a privacy policy URL and a support URL. Both are already written
 and sitting in this repo — you just need to switch on hosting.
 
-1. Go to <https://github.com/chrisallenclark/Cued/settings/pages>
+1. Go to <https://github.com/chrisallenclark/Remli/settings/pages>
 2. Under **Source**, pick **Deploy from a branch**
 3. Branch: `main`, folder: **`/docs`**, then **Save**
 
 A minute later they're live at:
 
-- `https://chrisallenclark.github.io/Cued/` — support page
-- `https://chrisallenclark.github.io/Cued/privacy` — privacy policy
-
-(If you rename the repo to `Remli`, the URLs change to match.)
+- `https://chrisallenclark.github.io/Remli/` — support page
+- `https://chrisallenclark.github.io/Remli/privacy` — privacy policy
 
 ---
 
