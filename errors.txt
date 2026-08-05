@@ -1,0 +1,7 @@
+GatherProvisioningInputs
+ProcessProductPackaging /Users/runner/work/Remli/Remli/Resources/Remli.entitlements /Users/runner/Library/Developer/Xcode/DerivedData/Remli-gzzxfhfzpedildgqqxgphrqxoeka/Build/Intermediates.noindex/ArchiveIntermediates/Remli/IntermediateBuildFilesPath/Remli.build/Release-iphoneos/Remli.build/Remli.app.xcent (in target 'Remli' from project 'Remli')
+    builtin-productPackagingUtility /Users/runner/work/Remli/Remli/Resources/Remli.entitlements -entitlements -format xml -o /Users/runner/Library/Developer/Xcode/DerivedData/Remli-gzzxfhfzpedildgqqxgphrqxoeka/Build/Intermediates.noindex/ArchiveIntermediates/Remli/IntermediateBuildFilesPath/Remli.build/Release-iphoneos/Remli.build/Remli.app.xcent
+    /usr/bin/codesign --force --sign - --generate-entitlement-der /Users/runner/Library/Developer/Xcode/DerivedData/Remli-gzzxfhfzpedildgqqxgphrqxoeka/Build/Intermediates.noindex/ArchiveIntermediates/Remli/IntermediateBuildFilesPath/UninstalledProducts/iphoneos/RemliWidgets.appex
+    /usr/bin/codesign --force --sign - --entitlements /Users/runner/Library/Developer/Xcode/DerivedData/Remli-gzzxfhfzpedildgqqxgphrqxoeka/Build/Intermediates.noindex/ArchiveIntermediates/Remli/IntermediateBuildFilesPath/Remli.build/Release-iphoneos/Remli.build/Remli.app.xcent --generate-entitlement-der /Users/runner/Library/Developer/Xcode/DerivedData/Remli-gzzxfhfzpedildgqqxgphrqxoeka/Build/Intermediates.noindex/ArchiveIntermediates/Remli/InstallationBuildProductsLocation/Applications/Remli.app
+** ARCHIVE SUCCEEDED **
+** EXPORT SUCCEEDED **
