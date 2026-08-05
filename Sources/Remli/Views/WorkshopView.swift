@@ -250,7 +250,10 @@ struct WorkshopView: View {
         failed = false
 
         let summary = IdeaSummary(idea)
-        let relatedSummaries = related.map(IdeaSummary.init)
+        // Closure rather than `map(IdeaSummary.init)`: the initialiser takes an excerpt
+        // limit with a default, and a bare function reference resolves to the full
+        // two-argument form, where defaults do not apply.
+        let relatedSummaries = related.map { IdeaSummary($0) }
         let intelligence = IntelligenceFactory.make()
 
         do {
