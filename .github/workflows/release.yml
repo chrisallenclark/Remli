@@ -159,13 +159,21 @@ jobs:
             2>&1 | tee -a "$RUNNER_TEMP/release.log"
           ls -la "$RUNNER_TEMP/export"
 
-      # Deliberately no `release-notes`. Setting it makes the action poll App Store Connect
-      # for the build's beta localization record so it has somewhere to write the text —
-      # and Apple does not create that record promptly for a brand new app. Build 3
-      # uploaded and processed as VALID, then the job failed after ten minutes of
-      # "Localization not ready", which reads as a failed release when the build is
-      # actually sitting in TestFlight. The notes are cosmetic; a red X on a shipped build
-      # is not. Type them in App Store Connect if they ever matter.
+      # This step does exactly one thing: upload. Every optional input here writes extra
+      # metadata to App Store Connect *after* the binary has already landed, and both of
+      # the ones tried so far failed the job on a build that had shipped fine:
+      #
+      #   release-notes              → polls for a beta localization record Apple does not
+      #                                create promptly for a new app. Ten minutes, then
+      #                                "Exceeded maximum attempts". (Build 3.)
+      #   uses-non-exempt-encryption → 409 ENTITY_ERROR.ATTRIBUTE.INVALID, "You cannot
+      #                                update when the value is already set" — because
+      #                                ITSAppUsesNonExemptEncryption in Info.plist already
+      #                                set it at build time. (Build 4.)
+      #
+      # A red X on a build that is sitting in TestFlight is worse than missing release
+      # notes, and it trains us to ignore the signal. Metadata belongs in Info.plist or in
+      # App Store Connect, not in the upload step.
       - name: Upload to TestFlight
         uses: apple-actions/upload-testflight-build@v4
         with:
@@ -173,7 +181,6 @@ jobs:
           issuer-id: ${{ secrets.ASC_ISSUER_ID }}
           api-key-id: ${{ secrets.ASC_KEY_ID }}
           api-private-key: ${{ secrets.ASC_KEY_P8 }}
-          uses-non-exempt-encryption: false
 
       - name: Keep the IPA for debugging
         if: always()
