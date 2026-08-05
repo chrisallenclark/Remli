@@ -29,6 +29,9 @@ concurrency:
   group: release
   cancel-in-progress: false
 
+permissions:
+  contents: write
+
 jobs:
   testflight:
     name: Archive, sign, upload
@@ -95,7 +98,8 @@ jobs:
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             DEVELOPMENT_TEAM="$TEAM_ID" \
-            CURRENT_PROJECT_VERSION=${{ github.run_number }}
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            2>&1 | tee "$RUNNER_TEMP/release.log"
 
       - name: Write export options
         env:
@@ -149,3 +153,44 @@ jobs:
           path: ${{ runner.temp }}/export/
           if-no-files-found: warn
           retention-days: 14
+
+      # Same reasoning as ci.yml: development happens on a machine that cannot compile or
+      # sign this project, so signing and upload failures have to be read back over plain
+      # git rather than an authenticated API call. Release runs are the ones where that
+      # matters most — they exercise entitlements, provisioning and upload, none of which
+      # the simulator builds touch.
+      - name: Publish signing diagnostics
+        if: failure()
+        run: |
+          mkdir -p "$RUNNER_TEMP/rel-log"
+          grep -aE "error:|Provisioning|provisioning profile|entitlement|Code Sign|unauthorized|No profiles|\*\* ARCHIVE" \
+            "$RUNNER_TEMP/release.log" 2>/dev/null | head -200 > "$RUNNER_TEMP/rel-log/errors.txt" || true
+          tail -200 "$RUNNER_TEMP/release.log" 2>/dev/null > "$RUNNER_TEMP/rel-log/tail.txt" || true
+          echo "$GITHUB_SHA" > "$RUNNER_TEMP/rel-log/sha.txt"
+
+          cd "$RUNNER_TEMP/rel-log"
+          git init -q
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Release diagnostics for $GITHUB_SHA"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/release-log
+
+      - name: Publish result as a git tag
+        if: always()
+        run: |
+          outcome=$([ "${{ job.status }}" = "success" ] && echo pass || echo fail)
+          tag="rel-${outcome}-${GITHUB_SHA}"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git ls-remote --tags origin 'refs/tags/rel-*' \
+            | awk '{print $2}' \
+            | sed 's#refs/tags/##' \
+            | while read -r old; do
+                [ "$old" = "$tag" ] || git push --delete origin "$old" || true
+              done
+
+          git tag -f "$tag"
+          git push -f origin "refs/tags/$tag"
