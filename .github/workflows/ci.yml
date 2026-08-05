@@ -62,6 +62,27 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             2>&1 | tee "$RUNNER_TEMP/build.log"
 
+      # `xcodebuild test` cannot take a generic destination — it needs a concrete simulator,
+      # by UDID. See scripts/pick-simulator.sh for why that is looked up rather than named.
+      - name: Pick a simulator
+        id: sim
+        run: |
+          udid=$(bash scripts/pick-simulator.sh)
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+
+      - name: Test
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project Remli.xcodeproj \
+            -scheme Remli \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            2>&1 | tee "$RUNNER_TEMP/test.log"
+
       # Same reasoning as the status tag: compiler errors have to be read back on a
       # machine with no compiler. Pushing them to an orphan branch makes them available
       # over plain git instead of an authenticated API call.
@@ -69,9 +90,13 @@ jobs:
         if: failure()
         run: |
           mkdir -p "$RUNNER_TEMP/ci-log"
-          grep -E "error:|warning:|note:|\*\* BUILD" "$RUNNER_TEMP/build.log" \
+          # Both logs, because the failure is now either a compile error or a failing test
+          # and the two look nothing alike.
+          cat "$RUNNER_TEMP/build.log" "$RUNNER_TEMP/test.log" 2>/dev/null \
+            > "$RUNNER_TEMP/all.log" || cp "$RUNNER_TEMP/build.log" "$RUNNER_TEMP/all.log"
+          grep -E "error:|warning:|note:|failed|XCTAssert|✘|\*\* (BUILD|TEST)" "$RUNNER_TEMP/all.log" \
             | head -200 > "$RUNNER_TEMP/ci-log/errors.txt" || true
-          tail -150 "$RUNNER_TEMP/build.log" > "$RUNNER_TEMP/ci-log/tail.txt" || true
+          tail -150 "$RUNNER_TEMP/all.log" > "$RUNNER_TEMP/ci-log/tail.txt" || true
           echo "$GITHUB_SHA" > "$RUNNER_TEMP/ci-log/sha.txt"
 
           cd "$RUNNER_TEMP/ci-log"

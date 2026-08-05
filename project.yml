@@ -83,13 +83,37 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         SKIP_INSTALL: YES
 
+  # Unit tests for the pure logic — hierarchy, chip ordering, scoring. Anything needing a
+  # live view or a real device is verified on the phone instead; there is no simulator in
+  # the development environment, only in CI, and a UI test suite nobody can run locally
+  # would rot faster than it caught anything.
+  RemliTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: Remli
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.chrisallenclark.remli.tests
+        GENERATE_INFOPLIST_FILE: YES
+        # @testable requires the app to be built without optimisation, which Debug already
+        # does. Tests never run against a Release build.
+        SWIFT_VERSION: "5.0"
+
 schemes:
   Remli:
     build:
       targets:
         Remli: all
         RemliWidgets: all
+        RemliTests: [test]
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - RemliTests
     archive:
       config: Release

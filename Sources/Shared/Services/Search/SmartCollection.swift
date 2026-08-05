@@ -2,15 +2,20 @@ import Foundation
 
 /// The filter chips above the ideas list.
 ///
-/// Categories are emergent, so the collection set has to be computed from what is actually
-/// there rather than hard-coded. The fixed ones earn their place by answering questions a
-/// category never can: *what could I finish quickly*, and *what did I start and abandon*.
+/// A *saved view*, not a container — this is what "Collection" must never be confused with.
+/// A `SmartCollection` is computed on every render and stores nothing; a Collection is a
+/// row in the database that ideas belong to. The chips happen to show both, because you
+/// filter by them the same way.
+///
+/// Spaces are emergent, so the chip set is computed from what is actually there rather
+/// than hard-coded. The fixed ones earn their place by answering questions a Space never
+/// can: *what could I finish quickly*, and *what did I start and abandon*.
 enum SmartCollection: Identifiable, Equatable, Hashable {
     case all
     case quickWins
     case inProgress
     case tasks
-    case category(id: UUID, name: String, isSubfolder: Bool)
+    case category(id: UUID, name: String, isCollection: Bool)
 
     var id: String {
         switch self {
@@ -38,9 +43,10 @@ enum SmartCollection: Identifiable, Equatable, Hashable {
         case .quickWins: return "bolt"
         case .inProgress: return "circle.lefthalf.filled"
         case .tasks: return "checkmark.circle"
-        // A subfolder chip sits immediately after its parent's, so the distinct glyph is
+        // A Collection chip sits immediately after its Space's, so the distinct glyph is
         // what stops "Business, Meal Prep, Bartending, Health" reading as four peers.
-        case .category(_, _, let isSubfolder): return isSubfolder ? "arrow.turn.down.right" : "folder"
+        case .category(_, _, let isCollection):
+            return isCollection ? "arrow.turn.down.right" : "square.stack.3d.up"
         }
     }
 
@@ -61,19 +67,19 @@ enum SmartCollection: Identifiable, Equatable, Hashable {
             return idea.status == .active
         case .tasks:
             return idea.kind == .task && idea.status != .done
-        case .category(let id, _, let isSubfolder):
+        case .category(let id, _, let isCollection):
             guard let category = idea.category else { return false }
             if category.id == id { return true }
-            // A parent folder shows everything underneath it. Selecting "Business" and
-            // being shown nothing, because all three ideas now live in subfolders, would
-            // punish you for organising. Nesting is capped at one level, so one hop up is
-            // the whole hierarchy.
-            return isSubfolder ? false : category.parent?.id == id
+            // A Space shows everything underneath it. Selecting "Business" and being shown
+            // nothing, because all three ideas now live in Collections, would punish you
+            // for organising. Nesting is capped at one level, so one hop up is the whole
+            // hierarchy.
+            return isCollection ? false : category.parent?.id == id
         }
     }
 
-    /// Builds the visible set. A collection that would be empty is never offered — a chip
-    /// that leads to nothing is just a dead end.
+    /// Builds the visible set. A chip that would be empty is never offered — one that leads
+    /// to nothing is just a dead end.
     static func available(for ideas: [Idea]) -> [SmartCollection] {
         var result: [SmartCollection] = [.all]
 
@@ -83,8 +89,8 @@ enum SmartCollection: Identifiable, Equatable, Hashable {
             }
         }
 
-        // Categories ordered by how much is in them, so the ones actually being used sit
-        // where they can be reached, with each folder's subfolders directly after it.
+        // Spaces ordered by how much is in them, so the ones actually being used sit where
+        // they can be reached, with each Space's Collections directly after it.
         //
         // A named struct rather than a labelled tuple: chaining map/sorted over an
         // anonymous tuple is reliably enough to time out the expression type checker.
@@ -92,7 +98,7 @@ enum SmartCollection: Identifiable, Equatable, Hashable {
             var id: UUID
             var name: String
             var parentID: UUID?
-            /// Includes subfolders, which is what orders a parent correctly once its ideas
+            /// Includes Collections, which is what orders a Space correctly once its ideas
             /// have all been moved down a level.
             var total: Int
         }
@@ -112,7 +118,7 @@ enum SmartCollection: Identifiable, Equatable, Hashable {
             }
             counts[category.id]?.total += 1
 
-            // A parent whose ideas all live in its subfolders still deserves a chip, so it
+            // A Space whose ideas all live in its Collections still deserves a chip, so it
             // is registered here even though no idea points at it directly.
             if let parent = category.parent {
                 if counts[parent.id] == nil {
@@ -144,14 +150,14 @@ enum SmartCollection: Identifiable, Equatable, Hashable {
         }
 
         for root in ordered(roots) {
-            result.append(.category(id: root.id, name: root.name, isSubfolder: false))
+            result.append(.category(id: root.id, name: root.name, isCollection: false))
 
             var children: [Tally] = []
             for tally in counts.values where tally.parentID == root.id {
                 children.append(tally)
             }
             for child in ordered(children) {
-                result.append(.category(id: child.id, name: child.name, isSubfolder: true))
+                result.append(.category(id: child.id, name: child.name, isCollection: true))
             }
         }
 

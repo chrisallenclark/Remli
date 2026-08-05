@@ -1,12 +1,22 @@
 import Foundation
 import SwiftData
 
-/// A category, invented by the model rather than shipped with the app.
+/// A **Space** — or, one level down, a **Collection** inside one.
 ///
-/// Remli deliberately starts with none. A fixed taxonomy would impose someone else's
-/// mental model; letting categories emerge from real captures means they end up matching
-/// how the person actually thinks. The cost is that the first few captures look
-/// unstructured, which the empty state acknowledges rather than hides.
+/// Both are this one type, distinguished only by whether `parent` is set. Two levels is
+/// the whole hierarchy, deliberately: Space → Collection → Idea, with tags cutting across
+/// all of it. Anything deeper is a filing system, and a filing system is the thing this
+/// app exists to replace.
+///
+/// Remli ships with no Spaces at all. A fixed taxonomy would impose someone else's mental
+/// model; letting Spaces emerge from real captures means they end up matching how the
+/// person actually thinks. The cost is that the first few captures look unstructured,
+/// which the empty state acknowledges rather than hides.
+///
+/// **The type is still called `IdeaCategory` on purpose.** A SwiftData model's class name
+/// is its CloudKit record type, so renaming this would orphan every record already synced
+/// to a device. "Space" is the language in the interface; the schema keeps the name it was
+/// born with. Do not rename it without a migration plan.
 @Model
 final class IdeaCategory {
 
@@ -27,29 +37,43 @@ final class IdeaCategory {
     @Relationship(deleteRule: .nullify, inverse: \Idea.category)
     var ideas: [Idea]?
 
-    /// The folder this one sits inside, if any.
+    /// The Space this Collection sits inside. Nil means this *is* a Space.
     ///
-    /// Emergent categories answer "what kind of thing is this" — Business, Health, Music.
-    /// They do not answer "which of my three businesses". A second level does, without
-    /// making the first capture of the day ask you to pick a project first: the model still
-    /// files into a top-level folder, and you sort the inside out later, once there is
-    /// enough there to be worth sorting.
-    ///
-    /// Deliberately one level of nesting only (enforced in the picker, not the model —
-    /// a stored constraint would be a migration the day it needs relaxing). Deeper trees
-    /// are a filing system, and a filing system is the thing this app exists to replace.
+    /// A Space answers "what part of my life is this" — Business, Health, Macrova. It does
+    /// not answer "which of my three businesses". A Collection does, without making the
+    /// first capture of the day ask you to pick a project: the model still files into a
+    /// Space, and you sort the inside out later, once there is enough there to be worth
+    /// sorting.
     var parent: IdeaCategory?
 
     @Relationship(deleteRule: .nullify, inverse: \IdeaCategory.parent)
     var children: [IdeaCategory]?
 
-    init(name: String, colorHex: String? = nil, symbolName: String = "lightbulb", parent: IdeaCategory? = nil) {
+    /// True when a person named this, false when the model proposed it.
+    ///
+    /// This is what stops Spaces being quietly reshaped underneath you. The model may
+    /// suggest a Space, and until you touch it, it stays a suggestion that later passes are
+    /// free to rename or merge. The moment you create or rename one yourself it becomes
+    /// yours, and enrichment may file *into* it but never edits it.
+    ///
+    /// Defaults to false so every Space that already exists — all of them model-invented —
+    /// keeps its current behaviour after the migration.
+    var isUserOwned: Bool = false
+
+    init(
+        name: String,
+        colorHex: String? = nil,
+        symbolName: String = "lightbulb",
+        parent: IdeaCategory? = nil,
+        isUserOwned: Bool = false
+    ) {
         self.id = UUID()
         self.createdAt = .now
         self.name = name
         self.symbolName = symbolName
         self.parent = parent
-        // A subfolder inherits its parent's colour, so a glance at the list still reads as
+        self.isUserOwned = isUserOwned
+        // A Collection inherits its Space's colour, so a glance at the list still reads as
         // "these three things are all Business" before you read a single word.
         self.colorHex = colorHex ?? parent?.colorHex ?? Self.suggestedColor(for: name)
     }
@@ -101,6 +125,14 @@ extension IdeaCategory {
     }
 
     var isRoot: Bool { parent == nil }
+
+    /// A Space is a top-level container; a Collection lives inside one. Same type, and the
+    /// only thing separating them is `parent`.
+    var isSpace: Bool { parent == nil }
+    var isCollection: Bool { parent != nil }
+
+    /// What to call this in the interface, so copy never has to branch on `parent` itself.
+    var kindLabel: String { isSpace ? "Space" : "Collection" }
 
     /// The top-level folder this belongs to — itself, when it is already top-level.
     var rootFolder: IdeaCategory {

@@ -9,7 +9,7 @@ struct IdeaDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var isEditing = false
-    @State private var isMovingToFolder = false
+    @State private var isMovingToSpace = false
 
     var body: some View {
         ScrollView {
@@ -67,9 +67,9 @@ struct IdeaDetailView: View {
                     }
 
                     Button {
-                        isMovingToFolder = true
+                        isMovingToSpace = true
                     } label: {
-                        Label("Move to folder…", systemImage: "folder")
+                        Label("Move to a Space…", systemImage: "square.stack.3d.up")
                     }
 
                     Divider()
@@ -85,8 +85,8 @@ struct IdeaDetailView: View {
                 }
             }
         }
-        .sheet(isPresented: $isMovingToFolder) {
-            FolderPickerView(idea: idea)
+        .sheet(isPresented: $isMovingToSpace) {
+            SpacePickerView(idea: idea)
         }
     }
 
@@ -100,15 +100,15 @@ struct IdeaDetailView: View {
             HStack(spacing: Theme.Space.xs) {
                 // The chip is the control. Filing is something you reconsider while looking
                 // at the idea, so the affordance belongs on the thing that shows where it
-                // is currently filed rather than buried in the overflow menu — which also
-                // still offers it, for when the idea has no folder to tap.
+                // currently lives rather than buried in the overflow menu — which also
+                // still offers it, for when the idea has no Space to tap.
                 Button {
-                    isMovingToFolder = true
+                    isMovingToSpace = true
                 } label: {
                     if let category = idea.category {
                         CategoryChip(category: category, showsPath: true)
                     } else {
-                        Label("Add to folder", systemImage: "folder.badge.plus")
+                        Label("Add to a Space", systemImage: "square.stack.3d.up")
                             .font(Theme.Typography.meta)
                             .foregroundStyle(Theme.Palette.inkMuted)
                     }
