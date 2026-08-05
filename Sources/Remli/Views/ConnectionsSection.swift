@@ -42,20 +42,33 @@ struct ConnectionsSection: View {
                 .foregroundStyle(isProposal ? Theme.Palette.ember : Theme.Palette.inkMuted)
                 .tracking(0.6)
 
-            ForEach(links) { link in
-                if let other = link.other(than: idea) {
-                    if isProposal {
+            if isProposal {
+                ForEach(links) { link in
+                    if let other = link.other(than: idea) {
                         // Not a navigation link: the decision is the action here, and a row
                         // that both navigates and holds buttons is a row you tap by mistake.
-                        ConnectionRow(link: link, other: other, from: idea, isProposal: true)
-                    } else {
-                        NavigationLink {
-                            IdeaDetailView(idea: other)
-                        } label: {
-                            ConnectionRow(link: link, other: other, from: idea, isProposal: false)
-                        }
-                        .buttonStyle(.plain)
+                        ConnectionRow(link: link, other: other, from: idea)
                     }
+                }
+            } else {
+                // Confirmed connections read sideways. Vertically they push the status
+                // control off the screen on any idea with more than two, and the thing you
+                // want at a glance is *how many* and *of what kind* — which a row answers
+                // and a column buries.
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .top, spacing: Theme.Space.xs) {
+                        ForEach(links) { link in
+                            if let other = link.other(than: idea) {
+                                NavigationLink {
+                                    IdeaDetailView(idea: other)
+                                } label: {
+                                    ConnectionCard(link: link, other: other, from: idea)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 2)
                 }
             }
         }
@@ -67,7 +80,6 @@ private struct ConnectionRow: View {
     let link: IdeaLink
     let other: Idea
     let from: Idea
-    let isProposal: Bool
 
     /// Directed relationships read differently depending on which end you are standing at:
     /// from the source "unlocks", from the target "unlocked by". Showing the source's
@@ -111,8 +123,7 @@ private struct ConnectionRow: View {
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if isProposal {
-                HStack(spacing: Theme.Space.xs) {
+            HStack(spacing: Theme.Space.xs) {
                     Button {
                         withAnimation(Theme.Motion.standard) { link.accept() }
                     } label: {
@@ -136,18 +147,113 @@ private struct ConnectionRow: View {
                             .background(Capsule().strokeBorder(Theme.Palette.hairline, lineWidth: 0.5))
                     }
                     .buttonStyle(.plain)
-                }
-                .padding(.top, Theme.Space.xxs)
             }
+            .padding(.top, Theme.Space.xxs)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardBackground()
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
-                .strokeBorder(
-                    isProposal ? Theme.Palette.ember.opacity(0.35) : Color.clear,
-                    lineWidth: 1
-                )
+                .strokeBorder(Theme.Palette.ember.opacity(0.35), lineWidth: 1)
+        )
+    }
+}
+
+/// A confirmed connection, as a card in a horizontal row.
+///
+/// Led by an icon in the other idea's Space colour, so a glance across the row tells you
+/// which parts of your life this idea touches before you read a word of it.
+private struct ConnectionCard: View {
+
+    let link: IdeaLink
+    let other: Idea
+    let from: Idea
+
+    private var accent: Color {
+        other.category.flatMap { Color(hex: $0.colorHex) } ?? Theme.Palette.ember
+    }
+
+    private var relationshipLabel: String {
+        let isSource = link.source?.id == from.id
+        guard link.kind.isDirected, !isSource else { return link.kind.label }
+
+        switch link.kind {
+        case .prerequisiteFor: return "Unlocked by"
+        case .buildsOn: return "Built on by"
+        default: return link.kind.label
+        }
+    }
+
+    private var strengthLabel: String {
+        switch link.strength {
+        case 0.7...: return "Strong"
+        case 0.45..<0.7: return "Medium"
+        default: return "Light"
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.xs) {
+            HStack(spacing: Theme.Space.xs) {
+                Image(systemName: other.category?.symbolName ?? link.kind.symbolName)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(accent)
+                    .frame(width: 30, height: 30)
+                    .background(
+                        RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+                            .fill(accent.opacity(0.16))
+                    )
+
+                Text(other.displayTitle)
+                    .font(Theme.Typography.control)
+                    .foregroundStyle(Theme.Palette.ink)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Text(relationshipLabel)
+                .font(Theme.Typography.meta)
+                .foregroundStyle(accent)
+                .padding(.horizontal, Theme.Space.xs)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(accent.opacity(0.14)))
+
+            Text(link.rationale)
+                .font(Theme.Typography.meta)
+                .foregroundStyle(Theme.Palette.inkMuted)
+                .lineSpacing(2)
+                .lineLimit(3)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
+
+            // A segmented bar rather than pips: four filled of four reads as "strong"
+            // faster than counting dots, and it gives the word underneath something to
+            // agree with.
+            HStack(spacing: 3) {
+                ForEach(0..<4, id: \.self) { index in
+                    Capsule()
+                        .fill(Double(index) < (link.strength * 4).rounded() ? accent : Theme.Palette.hairline)
+                        .frame(height: 3)
+                }
+
+                Text(strengthLabel)
+                    .font(Theme.Typography.meta)
+                    .foregroundStyle(Theme.Palette.inkMuted)
+                    .padding(.leading, 2)
+            }
+        }
+        .frame(width: 210, alignment: .leading)
+        .padding(Theme.Space.sm)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+                .fill(Theme.Palette.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+                .strokeBorder(Theme.Palette.hairline, lineWidth: 0.5)
         )
     }
 }
