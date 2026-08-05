@@ -27,6 +27,15 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 
+	<!-- Dark, regardless of the phone's setting.
+	     Must live HERE and not as INFOPLIST_KEY_UIUserInterfaceStyle in project.yml:
+	     those build settings are only merged when Xcode generates the Info.plist, and
+	     this target supplies its own, so the key was silently dropped and the app kept
+	     following the system appearance. The Map is where that showed — a glow drawn on
+	     white is a smudge. -->
+	<key>UIUserInterfaceStyle</key>
+	<string>Dark</string>
+
 	<!-- Shown verbatim in the system permission dialogs. Each says what Remli does
 	     with the permission and, where relevant, what it does not do. -->
 	<key>NSMicrophoneUsageDescription</key>

@@ -49,6 +49,16 @@ final class Idea {
 
     var pinned: Bool = false
 
+    /// Marked by the person as something they intend to build.
+    ///
+    /// This is what gives Roadmaps a starting point. Before it existed, a roadmap could
+    /// only appear if the model spontaneously decided one idea unlocked another — so a
+    /// library of genuinely good, genuinely unrelated ideas produced an empty screen and no
+    /// way to change that. Declaring a goal is the one judgement the app should never make
+    /// on your behalf: it is the difference between an idea you had and a thing you are
+    /// doing, and only you know which is which.
+    var isGoal: Bool = false
+
     // MARK: Resurfacing state
 
     /// Set when the user explicitly snoozes an idea to a date.

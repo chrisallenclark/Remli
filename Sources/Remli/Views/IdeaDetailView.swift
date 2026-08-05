@@ -80,6 +80,17 @@ struct IdeaDetailView: View {
                         Label("Move to a Space…", systemImage: "square.stack.3d.up")
                     }
 
+                    Button {
+                        idea.isGoal.toggle()
+                        if idea.isGoal, idea.status == .seed { idea.status = .active }
+                        idea.touch()
+                    } label: {
+                        Label(
+                            idea.isGoal ? "Stop pursuing this" : "I'm pursuing this",
+                            systemImage: idea.isGoal ? "flag.slash" : "flag"
+                        )
+                    }
+
                     Divider()
 
                     Button(role: .destructive) {

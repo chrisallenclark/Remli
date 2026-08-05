@@ -30,8 +30,50 @@ struct MapView: View {
 
     @State private var selection: UUID?
 
+    /// Nil shows everything. Otherwise only the ideas in one Space and its Collections.
+    ///
+    /// The map's problem at any real size is that "all of it at once" answers no question.
+    /// Filtering to a Space turns it from a picture of your library into a picture of one
+    /// thing you are working on, which is the only version anyone looks at twice.
+    @State private var focusedSpaceID: UUID?
+
     private var selectedNode: GraphNode? {
         selection.flatMap { graph.node($0) }
+    }
+
+    /// Every Space that has at least one idea in it, busiest first.
+    private var spaces: [IdeaCategory] {
+        var counts: [UUID: Int] = [:]
+        var byID: [UUID: IdeaCategory] = [:]
+
+        for idea in ideas where idea.kind == .idea {
+            guard let place = idea.category else { continue }
+            let space = place.rootFolder
+            counts[space.id, default: 0] += 1
+            byID[space.id] = space
+        }
+
+        var result: [IdeaCategory] = []
+        for (id, space) in byID {
+            _ = id
+            result.append(space)
+        }
+        result.sort { lhs, rhs in
+            let left = counts[lhs.id] ?? 0
+            let right = counts[rhs.id] ?? 0
+            if left == right { return lhs.name < rhs.name }
+            return left > right
+        }
+        return result
+    }
+
+    /// The ideas the map should show, after the Space filter.
+    private var visibleIdeas: [Idea] {
+        guard let focusedSpaceID else { return ideas }
+        return ideas.filter { idea in
+            guard let place = idea.category else { return false }
+            return place.rootFolder.id == focusedSpaceID
+        }
     }
 
     private var highlighted: Set<UUID> {
@@ -49,6 +91,11 @@ struct MapView: View {
                 canvas
             }
         }
+        .safeAreaInset(edge: .top) {
+            if spaces.count > 1 {
+                spaceFilter
+            }
+        }
         .navigationTitle("Map")
         .navigationBarTitleDisplayMode(.inline)
         // Opening the Map always shows everything.
@@ -63,6 +110,7 @@ struct MapView: View {
             fitToContent()
         }
         .task(id: ideas.count) { await rebuild() }
+        .task(id: focusedSpaceID) { await rebuild() }
         .sheet(item: Binding(
             get: { selection.map(IdentifiableID.init) },
             set: { selection = $0?.id }
@@ -395,8 +443,61 @@ struct MapView: View {
 
     // MARK: - Layout
 
+    private var spaceFilter: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Theme.Space.xs) {
+                filterChip(label: "All", color: Theme.Palette.ember, isSelected: focusedSpaceID == nil) {
+                    focusedSpaceID = nil
+                }
+
+                ForEach(spaces) { space in
+                    filterChip(
+                        label: space.name,
+                        color: Color(hex: space.colorHex) ?? Theme.Palette.ember,
+                        isSelected: focusedSpaceID == space.id
+                    ) {
+                        focusedSpaceID = focusedSpaceID == space.id ? nil : space.id
+                    }
+                }
+            }
+            .padding(.horizontal, Theme.Space.md)
+            .padding(.vertical, Theme.Space.xs)
+        }
+        .background(.ultraThinMaterial)
+    }
+
+    private func filterChip(
+        label: String,
+        color: Color,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            // Re-framing on every change of filter, because the remaining ideas occupy a
+            // completely different part of the canvas and leaving the camera where it was
+            // would show empty space.
+            hasAdjusted = false
+            selection = nil
+            withAnimation(Theme.Motion.standard) { action() }
+        } label: {
+            Text(label)
+                .font(Theme.Typography.meta)
+                .foregroundStyle(isSelected ? Theme.Palette.canvas : Theme.Palette.inkMuted)
+                .padding(.horizontal, Theme.Space.sm)
+                .padding(.vertical, 6)
+                .background(Capsule().fill(isSelected ? color : Theme.Palette.surface))
+                .overlay(
+                    Capsule().strokeBorder(
+                        isSelected ? Color.clear : Theme.Palette.hairline,
+                        lineWidth: 0.5
+                    )
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
     private func rebuild() async {
-        let snapshot = IdeaGraph(ideas: ideas)
+        let snapshot = IdeaGraph(ideas: visibleIdeas)
         graph = snapshot
 
         guard snapshot.nodes.count > 1 else {
