@@ -3,9 +3,9 @@
 There is no Mac in this loop. GitHub's macOS servers build and sign the app, then hand it
 to Apple, and it appears in TestFlight on your phone. You never touch Xcode.
 
-There are four things only you can do, because they need your Apple and GitHub accounts.
-Everything else is automated. Work through them in order — **step 1 takes the longest to
-be approved, so start it first and do the rest while you wait.**
+There are a handful of things only you can do, because they need your Apple and GitHub
+accounts. Everything else is automated. Work through them in order — **step 1 takes the
+longest to be approved, so start it first and do the rest while you wait.**
 
 ---
 
@@ -97,6 +97,11 @@ Multi-line is fine. Don't base64 it, don't strip the header lines.
      > `com.chrisallenclark.remli`.
    - **SKU:** `remli-001`
 3. Create.
+
+> The widgets ship as a separate bundle, `com.chrisallenclark.remli.widgets`. The build
+> server normally registers that one itself. If a build ever fails with *"No profiles for
+> com.chrisallenclark.remli.widgets were found"*, register it the same way as above — no
+> capabilities, no app record, just the identifier.
 
 ---
 
