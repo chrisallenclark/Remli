@@ -1,0 +1,108 @@
+name: CI
+
+# Compiles the app on every push. Because development happens on Linux where no
+# Swift/iOS toolchain exists, this workflow IS the compiler — its logs are the
+# primary feedback loop.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (iOS Simulator)
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select newest available Xcode
+        run: |
+          echo "Runner: $(sw_vers -productName) $(sw_vers -productVersion)"
+          echo "Installed Xcodes:"
+          ls -d /Applications/Xcode*.app 2>/dev/null || true
+          latest=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$latest" ]; then
+            sudo xcode-select -s "$latest"
+          fi
+          xcodebuild -version
+          echo "--- SDKs ---"
+          xcodebuild -showsdks | grep -i ios || true
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: |
+          xcodegen generate --spec project.yml
+          echo "--- targets ---"
+          xcodebuild -list -project Remli.xcodeproj
+
+      - name: Build
+        id: build
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Remli.xcodeproj \
+            -scheme Remli \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      # Same reasoning as the status tag: compiler errors have to be read back on a
+      # machine with no compiler. Pushing them to an orphan branch makes them available
+      # over plain git instead of an authenticated API call.
+      - name: Publish compiler diagnostics
+        if: failure()
+        run: |
+          mkdir -p "$RUNNER_TEMP/ci-log"
+          grep -E "error:|warning:|note:|\*\* BUILD" "$RUNNER_TEMP/build.log" \
+            | head -200 > "$RUNNER_TEMP/ci-log/errors.txt" || true
+          tail -150 "$RUNNER_TEMP/build.log" > "$RUNNER_TEMP/ci-log/tail.txt" || true
+          echo "$GITHUB_SHA" > "$RUNNER_TEMP/ci-log/sha.txt"
+
+          cd "$RUNNER_TEMP/ci-log"
+          git init -q
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "CI diagnostics for $GITHUB_SHA"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ci-log
+
+      # Publishes the outcome as a git tag named ci-pass-<sha> or ci-fail-<sha>.
+      #
+      # Development happens on a machine that cannot compile this project, so build
+      # results have to be read back constantly. `git ls-remote --tags` answers that
+      # question from the tag NAME alone — no API call, no auth, no fetch. The previous
+      # tag is deleted each time so exactly one ever exists.
+      - name: Publish result as a git tag
+        if: always()
+        run: |
+          outcome=$([ "${{ job.status }}" = "success" ] && echo pass || echo fail)
+          tag="ci-${outcome}-${GITHUB_SHA}"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git ls-remote --tags origin 'refs/tags/ci-*' \
+            | awk '{print $2}' \
+            | sed 's#refs/tags/##' \
+            | while read -r old; do
+                [ "$old" = "$tag" ] || git push --delete origin "$old" || true
+              done
+
+          git tag -f "$tag"
+          git push -f origin "refs/tags/$tag"

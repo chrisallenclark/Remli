@@ -1,0 +1,71 @@
+name: Syntax
+
+# Fast, free pre-flight on a Linux runner. Finishes in about a minute, versus several
+# for the macOS build, so it catches the dumb mistakes first.
+#
+# This only parses — it cannot typecheck Apple frameworks, which do not exist on Linux.
+# The real compile is ci.yml.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: syntax-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  parse:
+    name: Parse Swift sources
+    runs-on: ubuntu-latest
+    container: swift:6.1
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Parse all Swift files
+        run: |
+          chmod +x scripts/parse-check.sh
+          ./scripts/parse-check.sh
+
+  yaml:
+    name: Validate project.yml
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse YAML and plists
+        run: |
+          python3 - <<'PY'
+          import sys, plistlib, pathlib
+          try:
+              import yaml
+          except ImportError:
+              import subprocess
+              subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "pyyaml"])
+              import yaml
+
+          ok = True
+          for p in pathlib.Path(".").rglob("*.yml"):
+              if ".github" in p.parts or p.name == "project.yml":
+                  try:
+                      yaml.safe_load(p.read_text())
+                      print(f"✓ {p}")
+                  except Exception as e:
+                      print(f"✗ {p}: {e}"); ok = False
+
+          for p in pathlib.Path(".").rglob("*.plist"):
+              try:
+                  plistlib.loads(p.read_bytes())
+                  print(f"✓ {p}")
+              except Exception as e:
+                  print(f"✗ {p}: {e}"); ok = False
+
+          sys.exit(0 if ok else 1)
+          PY

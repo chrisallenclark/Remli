@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- iCloud sync. The container must exist on the App ID before a signed build
+	     will install; see SETUP.md.
+
+	     Deliberately no aps-environment / remote-notification background mode: those
+	     make CloudKit sync push-driven and near-instant, but they also add a
+	     provisioning surface that can fail the very first signed build. Without them
+	     SwiftData still syncs on launch and on foreground, which is enough for a
+	     single-user idea journal. Worth adding once the pipeline is proven. -->
+	<key>com.apple.developer.icloud-container-identifiers</key>
+	<array>
+		<string>iCloud.com.chrisallenclark.remli</string>
+	</array>
+	<key>com.apple.developer.icloud-services</key>
+	<array>
+		<string>CloudKit</string>
+	</array>
+</dict>
+</plist>
