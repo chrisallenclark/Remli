@@ -36,18 +36,37 @@ struct IdeaGraph: Equatable, Sendable {
 
     // MARK: - Dependency ordering
 
-    /// Rewrites directed links into a single "comes before" relation.
+    /// A roadmap step is a strong claim, so the bar is higher than for merely drawing a
+    /// line on the map. Saying "finish A and B becomes possible" when the two are only
+    /// loosely related is worse than saying nothing: it invents a plan the person never
+    /// made and then asks them to follow it.
+    static let minimumOrderStrength = 0.55
+
+    /// Ideas in dependency order.
     ///
-    /// The two directed kinds point opposite ways in the model: `prerequisiteFor` means
-    /// the source unlocks the target, while `buildsOn` means the source *depends on* the
-    /// target. Normalising them here is what lets one traversal handle both.
+    /// **Only `prerequisiteFor` counts.** `buildsOn` used to be folded in here as its
+    /// reverse, which is where spurious roadmaps came from: "builds on" means one idea
+    /// elaborates another — a personal-operating-system idea and an app that shares its
+    /// spirit — and that is a family resemblance, not a sequence. Reading it as order
+    /// produced confident nonsense like *finish the OS, then Remli becomes possible*.
+    /// Elaboration still shows on the map, where it belongs; it just no longer claims
+    /// anything about what to do first.
     private var precedence: [(before: UUID, after: UUID)] {
         edges.compactMap { edge in
-            switch edge.kind {
-            case .prerequisiteFor: return (edge.source, edge.target)
-            case .buildsOn: return (edge.target, edge.source)
-            case .relatesTo, .variantOf, .contradicts: return nil
-            }
+            guard edge.kind == .prerequisiteFor else { return nil }
+            guard edge.strength >= Self.minimumOrderStrength else { return nil }
+            return (edge.source, edge.target)
+        }
+    }
+
+    /// The link that put these two in sequence, so the roadmap can show its reasoning
+    /// rather than asserting an order the reader has to take on faith.
+    func orderingEdge(from before: UUID, to after: UUID) -> GraphEdge? {
+        edges.first { edge in
+            edge.kind == .prerequisiteFor
+                && edge.strength >= Self.minimumOrderStrength
+                && edge.source == before
+                && edge.target == after
         }
     }
 

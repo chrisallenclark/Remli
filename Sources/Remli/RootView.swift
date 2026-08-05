@@ -4,7 +4,7 @@ import SwiftUI
 /// The app shell.
 ///
 /// Four tabs, each earning its place: the list is where ideas live, the map shows them as
-/// a whole, Paths finds something to start on, and Review is the deliberate weekly
+/// a whole, Roadmaps finds something to start on, and Review is the deliberate weekly
 /// sit-down. Capture is a floating action rather than a tab, because it has to be
 /// reachable from anywhere without a mode change.
 struct RootView: View {
@@ -58,8 +58,8 @@ struct RootView: View {
                 NavigationStack { MapView() }
             }
 
-            Tab("Paths", systemImage: "arrow.triangle.branch") {
-                NavigationStack { PathsView() }
+            Tab("Roadmaps", systemImage: "arrow.triangle.branch") {
+                NavigationStack { RoadmapsView() }
             }
 
             Tab("Review", systemImage: "calendar.day.timeline.left") {

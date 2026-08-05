@@ -1,12 +1,14 @@
 import SwiftData
 import SwiftUI
 
-/// Paths — the routes through your ideas.
+/// Roadmaps — the routes through your ideas.
 ///
-/// The map shows that ideas are related. This shows something stronger and more
-/// actionable: that finishing one of them genuinely unlocks another. Only the directed
-/// links take part, so a path here is a claim about order, not just about topic.
-struct PathsView: View {
+/// The map shows that ideas are related. This shows something stronger and much easier to
+/// get wrong: that finishing one of them genuinely makes another possible. Only
+/// `prerequisiteFor` links above a confidence bar take part, and every step shows the
+/// sentence the model wrote to justify the order — because a roadmap you cannot argue with
+/// is a roadmap you cannot trust.
+struct RoadmapsView: View {
 
     @Query(sort: \Idea.createdAt, order: .reverse)
     private var ideas: [Idea]
@@ -23,12 +25,12 @@ struct PathsView: View {
             Theme.Palette.canvas.ignoresSafeArea()
 
             if chains.isEmpty {
-                NoPathsView(hasIdeas: !graph.isEmpty)
+                NoRoadmapsView(hasIdeas: !graph.isEmpty)
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: Theme.Space.xl) {
                         ForEach(Array(chains.enumerated()), id: \.offset) { _, chain in
-                            ChainView(chain: chain, ideasByID: ideasByID)
+                            ChainView(chain: chain, ideasByID: ideasByID, graph: graph)
                         }
                     }
                     .padding(.horizontal, Theme.Space.md)
@@ -36,7 +38,7 @@ struct PathsView: View {
                 }
             }
         }
-        .navigationTitle("Paths")
+        .navigationTitle("Roadmaps")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: ideas.count) { rebuild() }
     }
@@ -52,9 +54,19 @@ private struct ChainView: View {
 
     let chain: [UUID]
     let ideasByID: [UUID: Idea]
+    let graph: IdeaGraph
 
     private var steps: [Idea] {
         chain.compactMap { ideasByID[$0] }
+    }
+
+    /// The written reason each step follows the one above it. Index 0 has no predecessor,
+    /// so it has no reason — which is why this is looked up per step rather than zipped.
+    private func reason(forStepAt index: Int) -> String? {
+        guard index > 0, index < chain.count else { return nil }
+        let edge = graph.orderingEdge(from: chain[index - 1], to: chain[index])
+        let rationale = edge?.rationale.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (rationale?.isEmpty == false) ? rationale : nil
     }
 
     var body: some View {
@@ -71,7 +83,8 @@ private struct ChainView: View {
                     StepRow(
                         idea: idea,
                         index: index,
-                        isLast: index == steps.count - 1
+                        isLast: index == steps.count - 1,
+                        reason: reason(forStepAt: index)
                     )
                 }
                 .buttonStyle(.plain)
@@ -85,6 +98,9 @@ private struct StepRow: View {
     let idea: Idea
     let index: Int
     let isLast: Bool
+    /// Why this step follows the previous one. Nil for the first step, and for any link
+    /// the model produced without a usable explanation.
+    let reason: String?
 
     private var accent: Color {
         idea.category.flatMap { Color(hex: $0.colorHex) } ?? Theme.Palette.ember
@@ -128,10 +144,16 @@ private struct StepRow: View {
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
 
-                if index > 0 {
-                    Text("unlocked by the step above")
+                // The model's own justification, verbatim. "Unlocked by the step above"
+                // said nothing and asked to be believed; this can be read and disagreed
+                // with, which is the only way a claim about order earns any trust.
+                if let reason {
+                    Text(reason)
                         .font(Theme.Typography.meta)
                         .foregroundStyle(Theme.Palette.inkMuted)
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .multilineTextAlignment(.leading)
                 }
             }
             .padding(.bottom, isLast ? 0 : Theme.Space.sm)
@@ -142,7 +164,7 @@ private struct StepRow: View {
     }
 }
 
-private struct NoPathsView: View {
+private struct NoRoadmapsView: View {
     let hasIdeas: Bool
 
     var body: some View {
@@ -151,12 +173,12 @@ private struct NoPathsView: View {
                 .font(.system(size: 36, weight: .light))
                 .foregroundStyle(Theme.Palette.ember)
 
-            Text("No paths yet")
+            Text("No roadmaps yet")
                 .font(Theme.Typography.title)
                 .foregroundStyle(Theme.Palette.ink)
 
             Text(hasIdeas
-                 ? "Paths appear when Remli spots that finishing\none idea would unlock another."
+                 ? "A roadmap appears when Remli is confident that\nfinishing one idea genuinely makes another possible.\nRelated ideas alone aren't enough."
                  : "Capture a few ideas and Remli will start\nworking out which ones depend on which.")
                 .font(Theme.Typography.meta)
                 .multilineTextAlignment(.center)

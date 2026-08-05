@@ -129,13 +129,12 @@ struct MapView: View {
                         )
                     }
 
-                    // Labels only once there is room for them to be readable.
-                    if committedZoom * zoom > 0.75, isLit {
+                    if isLit, showsAllLabels || committedZoom * zoom > 0.75 {
                         context.draw(
                             Text(node.title)
-                                .font(.system(size: 9))
-                                .foregroundStyle(Theme.Palette.inkMuted),
-                            at: CGPoint(x: point.x, y: point.y + radius + 8),
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(Theme.Palette.ink),
+                            at: CGPoint(x: point.x, y: point.y + radius + 6),
                             anchor: .top
                         )
                     }
@@ -146,22 +145,31 @@ struct MapView: View {
                 viewSize = size
                 fitToContent()
             }
+            // One composed gesture rather than `.gesture` plus `.simultaneousGesture`.
+            //
+            // With two separate recognisers the drag would claim the interaction and
+            // cancel the magnify, and a cancelled gesture never calls `onEnded` — so the
+            // committed zoom was never written and the map sprang back to its previous
+            // scale the instant you lifted your fingers. `SimultaneousGesture` gives both
+            // recognisers the same events and one end callback that always fires.
             .gesture(
-                DragGesture()
-                    .onChanged { pan = $0.translation }
+                SimultaneousGesture(DragGesture(minimumDistance: 0), MagnifyGesture())
+                    .onChanged { value in
+                        if let drag = value.first {
+                            pan = drag.translation
+                        }
+                        if let magnify = value.second {
+                            zoom = magnify.magnification
+                        }
+                    }
                     .onEnded { _ in
                         committedPan.width += pan.width
                         committedPan.height += pan.height
                         pan = .zero
-                        hasAdjusted = true
-                    }
-            )
-            .simultaneousGesture(
-                MagnifyGesture()
-                    .onChanged { zoom = $0.magnification }
-                    .onEnded { _ in
-                        committedZoom = min(max(committedZoom * zoom, 0.3), 4)
+
+                        committedZoom = min(max(committedZoom * zoom, Self.minZoom), Self.maxZoom)
                         zoom = 1
+
                         hasAdjusted = true
                     }
             )
@@ -249,6 +257,11 @@ struct MapView: View {
     }
 
     /// Zooms so the whole graph fits, with a margin for the labels that hang below nodes.
+    ///
+    /// Capped at 1× rather than letting a small library magnify itself. With four ideas the
+    /// bounds are tiny, so "fit" wanted to zoom to 2.5× — which put the camera *inside* the
+    /// cluster, pushing every node past the edges. A map that has zoomed into empty space
+    /// is indistinguishable from a broken one.
     private func fitToContent() {
         guard
             !hasAdjusted,
@@ -256,18 +269,34 @@ struct MapView: View {
             layoutBounds.width > 0, layoutBounds.height > 0
         else { return }
 
-        let margin: CGFloat = 56
+        let margin: CGFloat = 72
         let usableWidth = max(viewSize.width - margin * 2, 40)
         let usableHeight = max(viewSize.height - margin * 2, 40)
         let scale = min(usableWidth / layoutBounds.width, usableHeight / layoutBounds.height)
 
-        committedZoom = min(max(scale, 0.25), 2.5)
+        committedZoom = min(max(scale, Self.minZoom), 1)
         committedPan = .zero
     }
 
+    static let minZoom: CGFloat = 0.3
+    static let maxZoom: CGFloat = 4
+
+    /// Above this many nodes, labels are drawn only when zoomed in. Below it, every idea is
+    /// named all the time — a handful of anonymous dots is not a map of anything.
+    private static let labelAllThreshold = 45
+
+    /// Node size in *view* points, deliberately independent of zoom.
+    ///
+    /// Scaling radius with zoom meant a fitted map of four ideas drew 5-point dots, which
+    /// reads as a blank screen with some dust on it. Keeping size fixed means zoom controls
+    /// how much you can see, not whether you can see it, and every node stays a finger-sized
+    /// target at any scale.
     private func radius(for node: GraphNode) -> CGFloat {
-        let scale = committedZoom * zoom
-        return (5 + CGFloat(node.importance) * 7) * min(max(scale, 0.6), 1.6)
+        11 + CGFloat(node.importance) * 9
+    }
+
+    private var showsAllLabels: Bool {
+        graph.nodes.count <= Self.labelAllThreshold
     }
 
     private func select(at location: CGPoint, in size: CGSize) {
