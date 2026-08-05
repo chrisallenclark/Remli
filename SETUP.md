@@ -87,7 +87,16 @@ Multi-line is fine. Don't base64 it, don't strip the header lines.
 1. Go to <https://appstoreconnect.apple.com/apps> → **+** → **New App**
 2. Fill in:
    - **Platform:** iOS
-   - **Name:** `Remli` (if taken, try `Remli - Idea Capture`)
+   - **Name:** `Remli: Think. Connect. Build.`
+
+     > Plain `Remli` is unavailable — someone reserved it in App Store Connect and never
+     > shipped, and Apple holds a reserved name for up to a year. This costs nothing: the
+     > name here is only the store listing. What appears under the icon on your home
+     > screen comes from `CFBundleDisplayName` in `Resources/Info.plist`, which still says
+     > **Remli**. The bundle ID is unaffected too. No code changes.
+     >
+     > The field allows 30 characters; this is 29. It can be changed freely any time
+     > before the app goes public.
    - **Primary language:** English (U.S.)
    - **Bundle ID:** select `com.chrisallenclark.remli`
 
