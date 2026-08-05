@@ -27,6 +27,11 @@ final class ConnectionEngine {
     /// wrong connection costs more trust than a missing one.
     private static let minimumLinkStrength = 0.25
 
+    /// A proposal this strong is written straight in, when auto-accept is on. Deliberately
+    /// high: the point of auto-accept is to spare you the obvious ones, not to smuggle the
+    /// debatable ones past you.
+    static let autoAcceptStrength = 0.8
+
     private static let maxAttempts = 3
 
     /// Only the most recent ideas are considered as candidates. Recall is linear, and
@@ -174,18 +179,32 @@ final class ConnectionEngine {
 
         // Existing links are keyed so a re-run cannot produce a visible duplicate. The key
         // sorts endpoints for undirected kinds, so A→B and B→A collapse to one.
+        // Includes rejected links, which is the whole point of keeping them: a pair you
+        // have already turned down must never come back as a fresh suggestion.
         var existingKeys = Set(idea.allLinks.map(\.dedupeKey))
+
+        let autoAccept = FeatureFlags.shared.autoAcceptConnections
 
         for proposal in proposals {
             guard proposal.strength >= Self.minimumLinkStrength else { continue }
             guard let target = byID[proposal.targetID] else { continue }
+
+            // Proposing rather than asserting is the default. An unexplained link presented
+            // as fact is something you either believe on faith or learn to distrust; a
+            // proposal you accepted is something you know is true.
+            let state: LinkReviewState = (autoAccept && proposal.strength >= Self.autoAcceptStrength)
+                ? .accepted
+                : .pending
 
             let link = IdeaLink(
                 source: idea,
                 target: target,
                 kind: proposal.kind,
                 rationale: proposal.rationale,
-                strength: proposal.strength
+                strength: proposal.strength,
+                confidence: proposal.strength,
+                origin: .ai,
+                reviewState: state
             )
 
             guard existingKeys.insert(link.dedupeKey).inserted else { continue }

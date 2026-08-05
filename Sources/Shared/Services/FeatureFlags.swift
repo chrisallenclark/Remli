@@ -28,11 +28,15 @@ final class FeatureFlags {
 
     // MARK: - Flags
 
-    /// Phase 3 — connections are proposed and wait for approval instead of being written
-    /// silently. Off means the current behaviour: the engine writes links as it finds them.
-    var proposeConnections: Bool {
-        get { defaults.bool(forKey: Key.proposeConnections) }
-        set { defaults.set(newValue, forKey: Key.proposeConnections) }
+    /// Whether very confident connections are written without asking.
+    ///
+    /// Phrased as opt-*in* to automation rather than opt-in to review, so the default —
+    /// `false`, because that is what `UserDefaults.bool` returns for a key nobody has set —
+    /// is the safe one. Proposing is the behaviour Remli should have out of the box; being
+    /// spared the obvious ones is the thing you choose once you trust it.
+    var autoAcceptConnections: Bool {
+        get { defaults.bool(forKey: Key.autoAcceptConnections) }
+        set { defaults.set(newValue, forKey: Key.autoAcceptConnections) }
     }
 
     // Phase 4's `spaceEnvironments` flag lived here and has been removed: the Space view
@@ -50,7 +54,7 @@ final class FeatureFlags {
     /// Turns everything off. The recovery path when an unfinished feature makes the app
     /// unusable and reinstalling would cost the local store.
     func resetAll() {
-        proposeConnections = false
+        autoAcceptConnections = false
         clusteredMap = false
     }
 
@@ -59,7 +63,7 @@ final class FeatureFlags {
     /// Namespaced so a flag can never collide with the resurfacing settings, which share
     /// the same defaults domain.
     private enum Key {
-        static let proposeConnections = "remli.flag.proposeConnections"
+        static let autoAcceptConnections = "remli.flag.autoAcceptConnections"
         static let clusteredMap = "remli.flag.clusteredMap"
     }
 }

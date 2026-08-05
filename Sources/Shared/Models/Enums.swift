@@ -65,6 +65,26 @@ enum CaptureMode: String, Codable, CaseIterable, Sendable {
     case voice
 }
 
+/// Who proposed a connection.
+///
+/// Worth storing because the two deserve different treatment: a link you drew yourself is
+/// never up for review, and never gets pruned by a later pass.
+enum LinkOrigin: String, Codable, CaseIterable, Sendable {
+    case ai
+    case user
+}
+
+/// Where a proposed connection stands.
+///
+/// `rejected` is kept rather than deleted so the engine can remember it was turned down.
+/// Re-proposing something you already dismissed is the fastest way to teach someone to
+/// ignore every suggestion the app makes.
+enum LinkReviewState: String, Codable, CaseIterable, Sendable {
+    case pending
+    case accepted
+    case rejected
+}
+
 /// The type of an edge between two ideas.
 ///
 /// This is what separates Remli from "related notes". A generic similarity score tells you

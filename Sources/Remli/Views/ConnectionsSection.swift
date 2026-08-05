@@ -10,26 +10,49 @@ struct ConnectionsSection: View {
 
     let idea: Idea
 
-    private var links: [IdeaLink] {
-        idea.allLinks
-            .filter { $0.other(than: idea) != nil }
-            .sorted { $0.strength > $1.strength }
+    private var usable: [IdeaLink] {
+        idea.allLinks.filter { $0.other(than: idea) != nil }
+    }
+
+    private var accepted: [IdeaLink] {
+        usable.filter { $0.reviewState == .accepted }.sorted { $0.strength > $1.strength }
+    }
+
+    private var pending: [IdeaLink] {
+        usable.filter { $0.reviewState == .pending }.sorted { $0.strength > $1.strength }
     }
 
     var body: some View {
-        if !links.isEmpty {
-            VStack(alignment: .leading, spacing: Theme.Space.sm) {
-                Text("CONNECTIONS")
-                    .font(Theme.Typography.sectionLabel)
-                    .foregroundStyle(Theme.Palette.inkMuted)
-                    .tracking(0.6)
+        VStack(alignment: .leading, spacing: Theme.Space.lg) {
+            // Proposals first. They are the thing asking for something.
+            if !pending.isEmpty {
+                section(title: "REMLI NOTICED", links: pending, isProposal: true)
+            }
 
-                ForEach(links) { link in
-                    if let other = link.other(than: idea) {
+            if !accepted.isEmpty {
+                section(title: "CONNECTIONS", links: accepted, isProposal: false)
+            }
+        }
+    }
+
+    private func section(title: String, links: [IdeaLink], isProposal: Bool) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Space.sm) {
+            Text(title)
+                .font(Theme.Typography.sectionLabel)
+                .foregroundStyle(isProposal ? Theme.Palette.ember : Theme.Palette.inkMuted)
+                .tracking(0.6)
+
+            ForEach(links) { link in
+                if let other = link.other(than: idea) {
+                    if isProposal {
+                        // Not a navigation link: the decision is the action here, and a row
+                        // that both navigates and holds buttons is a row you tap by mistake.
+                        ConnectionRow(link: link, other: other, from: idea, isProposal: true)
+                    } else {
                         NavigationLink {
                             IdeaDetailView(idea: other)
                         } label: {
-                            ConnectionRow(link: link, other: other, from: idea)
+                            ConnectionRow(link: link, other: other, from: idea, isProposal: false)
                         }
                         .buttonStyle(.plain)
                     }
@@ -44,6 +67,7 @@ private struct ConnectionRow: View {
     let link: IdeaLink
     let other: Idea
     let from: Idea
+    let isProposal: Bool
 
     /// Directed relationships read differently depending on which end you are standing at:
     /// from the source "unlocks", from the target "unlocked by". Showing the source's
@@ -86,9 +110,45 @@ private struct ConnectionRow: View {
                 .lineSpacing(2)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
+
+            if isProposal {
+                HStack(spacing: Theme.Space.xs) {
+                    Button {
+                        withAnimation(Theme.Motion.standard) { link.accept() }
+                    } label: {
+                        Text("Connect")
+                            .font(Theme.Typography.control)
+                            .foregroundStyle(Theme.Palette.canvas)
+                            .padding(.horizontal, Theme.Space.md)
+                            .padding(.vertical, 7)
+                            .background(Capsule().fill(Theme.Palette.ember))
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        withAnimation(Theme.Motion.standard) { link.reject() }
+                    } label: {
+                        Text("Not related")
+                            .font(Theme.Typography.control)
+                            .foregroundStyle(Theme.Palette.inkMuted)
+                            .padding(.horizontal, Theme.Space.md)
+                            .padding(.vertical, 7)
+                            .background(Capsule().strokeBorder(Theme.Palette.hairline, lineWidth: 0.5))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.top, Theme.Space.xxs)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardBackground()
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+                .strokeBorder(
+                    isProposal ? Theme.Palette.ember.opacity(0.35) : Color.clear,
+                    lineWidth: 1
+                )
+        )
     }
 }
 

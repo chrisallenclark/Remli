@@ -158,6 +158,9 @@ extension IdeaGraph {
         for idea in included {
             for link in idea.outgoingLinks ?? [] {
                 guard
+                    // Pending and rejected links are not part of the picture. A proposal
+                    // drawn on the map would be indistinguishable from a fact.
+                    link.isActive,
                     let sourceID = link.source?.id,
                     let targetID = link.target?.id,
                     includedIDs.contains(sourceID),
