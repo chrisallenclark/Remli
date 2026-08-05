@@ -38,6 +38,14 @@ struct RootView: View {
                         .navigationBarTitleDisplayMode(.large)
                         .toolbar {
                             ToolbarItem(placement: .topBarTrailing) {
+                                NavigationLink {
+                                    SpacesView()
+                                } label: {
+                                    Image(systemName: "square.grid.2x2")
+                                }
+                            }
+
+                            ToolbarItem(placement: .topBarTrailing) {
                                 Button {
                                     isShowingSettings = true
                                 } label: {

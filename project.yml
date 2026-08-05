@@ -58,7 +58,14 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         TARGETED_DEVICE_FAMILY: "1" # iPhone only
         SUPPORTS_MACCATALYST: NO
-        INFOPLIST_KEY_UIUserInterfaceStyle: Automatic
+        # Dark, not system-adaptive.
+        #
+        # Remli is a place you go to think, and the two screens that carry the product —
+        # the Map and a Space — are built on light emitted against darkness: glowing nodes,
+        # a Space's colour washing a near-black ground. Those effects have no light-mode
+        # equivalent; on white they read as smudges. Committing to one world means both
+        # screens can be designed properly instead of compromised twice.
+        INFOPLIST_KEY_UIUserInterfaceStyle: Dark
         SWIFT_EMIT_LOC_STRINGS: YES
         # Capabilities arrive in later phases (CloudKit, App Groups, background modes).
         # P0 deliberately ships with the minimum entitlement surface so that the very

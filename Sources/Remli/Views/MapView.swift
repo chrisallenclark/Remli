@@ -97,18 +97,34 @@ struct MapView: View {
                     let isLit = selection == nil
                         || highlighted.contains(edge.source) && highlighted.contains(edge.target)
 
+                    // A gentle arc rather than a straight line. Two nodes joined by a
+                    // segment read as a diagram; the same pair joined by a curve reads as
+                    // something grown. The control point is perpendicular to the midpoint
+                    // and always bends the same way, so the picture stays stable.
+                    let mid = CGPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2)
+                    let span = CGPoint(x: b.x - a.x, y: b.y - a.y)
+                    let length = max(hypot(span.x, span.y), 0.01)
+                    let bend = min(length * 0.12, 34)
+                    let control = CGPoint(
+                        x: mid.x - span.y / length * bend,
+                        y: mid.y + span.x / length * bend
+                    )
+
                     var path = Path()
                     path.move(to: a)
-                    path.addLine(to: b)
+                    path.addQuadCurve(to: b, control: control)
+
+                    let edgeTint = self.color(for: edge.source)
 
                     context.stroke(
                         path,
-                        with: .color(Theme.Palette.inkMuted.opacity(isLit ? 0.15 + edge.strength * 0.35 : 0.05)),
+                        with: .color(edgeTint.opacity(isLit ? 0.22 + edge.strength * 0.5 : 0.06)),
                         style: StrokeStyle(
-                            lineWidth: 0.6 + edge.strength * 1.4,
+                            lineWidth: 0.8 + edge.strength * 2,
+                            lineCap: .round,
                             // Dashed for the "tension with" edges, so a disagreement
                             // between two ideas is legible without tapping.
-                            dash: edge.kind == .contradicts ? [4, 4] : []
+                            dash: edge.kind == .contradicts ? [4, 5] : []
                         )
                     )
                 }
@@ -127,16 +143,53 @@ struct MapView: View {
                         height: radius * 2
                     )
 
+                    // The halo. An idea is a light source here, not a dot — which is what
+                    // separates a map you want to look at from a scatter plot, and is only
+                    // possible because the app committed to a dark ground.
+                    let haloRadius = radius * 3.4
+                    let haloRect = CGRect(
+                        x: point.x - haloRadius,
+                        y: point.y - haloRadius,
+                        width: haloRadius * 2,
+                        height: haloRadius * 2
+                    )
                     context.fill(
-                        Circle().path(in: rect),
-                        with: .color(color.opacity(isLit ? (node.status == .done ? 0.35 : 0.95) : 0.15))
+                        Circle().path(in: haloRect),
+                        with: .radialGradient(
+                            Gradient(colors: [
+                                color.opacity(isLit ? 0.34 : 0.06),
+                                color.opacity(0),
+                            ]),
+                            center: point,
+                            startRadius: radius * 0.5,
+                            endRadius: haloRadius
+                        )
                     )
 
+                    context.fill(
+                        Circle().path(in: rect),
+                        with: .color(color.opacity(isLit ? (node.status == .done ? 0.28 : 0.92) : 0.14))
+                    )
+
+                    // A finished idea reads as an outline — present, no longer burning.
                     if node.status == .done {
                         context.stroke(
                             Circle().path(in: rect),
                             with: .color(color.opacity(isLit ? 0.9 : 0.2)),
                             lineWidth: 1.5
+                        )
+                    } else {
+                        // A hot centre, so bigger nodes do not read as flat discs.
+                        let coreRadius = radius * 0.45
+                        let coreRect = CGRect(
+                            x: point.x - coreRadius,
+                            y: point.y - coreRadius,
+                            width: coreRadius * 2,
+                            height: coreRadius * 2
+                        )
+                        context.fill(
+                            Circle().path(in: coreRect),
+                            with: .color(.white.opacity(isLit ? 0.5 : 0.08))
                         )
                     }
 
@@ -311,6 +364,13 @@ struct MapView: View {
 
     private var showsAllLabels: Bool {
         graph.nodes.count <= Self.labelAllThreshold
+    }
+
+    /// A node's Space colour, used for its halo and for the edges leaving it — so a cluster
+    /// belonging to one Space glows as one thing rather than as unrelated points.
+    private func color(for id: UUID) -> Color {
+        guard let node = graph.node(id) else { return Theme.Palette.ember }
+        return node.colorHex.flatMap { Color(hex: $0) } ?? Theme.Palette.ember
     }
 
     private func select(at location: CGPoint, in size: CGSize) {
