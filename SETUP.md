@@ -110,18 +110,46 @@ Multi-line is fine. Don't base64 it, don't strip the header lines.
 Remli syncs your ideas through your own iCloud account. That needs a container registered
 against the app.
 
-1. Go to <https://developer.apple.com/account/resources/identifiers/list>
-2. Click the `com.chrisallenclark.remli` identifier
-3. Tick **iCloud**, then **Configure**
-4. Click **+** to create a container. Use exactly:
+This takes three passes through
+<https://developer.apple.com/account/resources/identifiers/list>, and it cannot be done in
+one. On the **Register an App ID** page the **Configure** button next to iCloud is greyed
+out — the App ID doesn't exist yet, so there is nothing to attach a container to. That is
+expected, not an error.
 
-   ```
-   iCloud.com.chrisallenclark.remli
-   ```
+**Pass 1 — register the App ID**
 
-   The string must match character for character — the app asks for that exact container,
-   and a mismatch makes signed builds fail to install.
-5. Assign the container to the App ID, then **Save**.
+**+** → **App IDs** → **App**
+
+- Description `Remli`
+- Bundle ID **Explicit** → `com.chrisallenclark.remli`
+- In the capabilities list, tick **iCloud** and nothing else. Use the 🔍 to filter — the
+  list is long and alphabetical.
+- **Continue** → **Register**
+
+**Pass 2 — create the container**
+
+Back on the identifiers list, change the dropdown at the top right from **App IDs** to
+**iCloud Containers**, then **+**
+
+- Description `Remli`
+- Identifier, exactly:
+
+  ```
+  iCloud.com.chrisallenclark.remli
+  ```
+
+  Character for character — the app asks for that exact container, and a mismatch makes
+  signed builds fail to install.
+- **Continue** → **Register**
+
+**Pass 3 — connect them**
+
+Switch the dropdown back to **App IDs** → click **Remli** → scroll to **iCloud**.
+**Configure** is now live.
+
+- Choose the **CloudKit** option if offered (not iCloud Documents)
+- Tick `iCloud.com.chrisallenclark.remli`
+- **Continue** → **Save**
 
 > If you skip this, everything still works — your ideas just stay on one device, and the
 > signed build will fail to install until the container exists.
