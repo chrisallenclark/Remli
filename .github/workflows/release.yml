@@ -90,10 +90,22 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate --spec project.yml
 
+      # Ad-hoc signed on purpose (CODE_SIGN_IDENTITY=-), NOT signed for distribution.
+      #
+      # Xcode's automatic signing always provisions an *iOS App Development* profile for
+      # the archive action and re-signs for distribution at export. A development profile
+      # must enumerate devices, and a team that has never had a Mac plugged into it has
+      # none, so the archive dies with "your team has no devices from which to generate a
+      # provisioning profile". Overriding CODE_SIGN_IDENTITY to "Apple Distribution" is
+      # not an escape — automatic signing rejects it as a conflicting identity.
+      #
+      # Ad-hoc signing sidesteps provisioning entirely: it is local, needs no profile and
+      # no device, and still applies CODE_SIGN_ENTITLEMENTS, so the iCloud container
+      # survives into the archive. The export step below then creates the distribution
+      # certificate and App Store profile (neither of which involves devices) and
+      # re-signs. See https://developer.apple.com/forums/thread/756119
       - name: Archive
         env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           TEAM_ID: ${{ secrets.TEAM_ID }}
         run: |
           set -o pipefail
@@ -103,10 +115,9 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/Remli.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            CODE_SIGN_IDENTITY=- \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            CODE_SIGN_STYLE=Automatic \
             DEVELOPMENT_TEAM="$TEAM_ID" \
             CURRENT_PROJECT_VERSION=${{ github.run_number }} \
             2>&1 | tee "$RUNNER_TEMP/release.log"
@@ -142,7 +153,8 @@ jobs:
             -allowProvisioningUpdates \
             -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
             -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            2>&1 | tee -a "$RUNNER_TEMP/release.log"
           ls -la "$RUNNER_TEMP/export"
 
       - name: Upload to TestFlight
@@ -174,7 +186,7 @@ jobs:
         if: failure()
         run: |
           mkdir -p "$RUNNER_TEMP/rel-log"
-          grep -aE "error:|Provisioning|provisioning profile|entitlement|Code Sign|unauthorized|No profiles|\*\* ARCHIVE" \
+          grep -aE "error:|Provisioning|provisioning profile|entitlement|Code Sign|certificate|unauthorized|No profiles|exportArchive|\*\* (ARCHIVE|EXPORT)" \
             "$RUNNER_TEMP/release.log" 2>/dev/null | head -200 > "$RUNNER_TEMP/rel-log/errors.txt" || true
           tail -200 "$RUNNER_TEMP/release.log" 2>/dev/null > "$RUNNER_TEMP/rel-log/tail.txt" || true
           echo "$GITHUB_SHA" > "$RUNNER_TEMP/rel-log/sha.txt"
