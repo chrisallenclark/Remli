@@ -159,6 +159,13 @@ jobs:
             2>&1 | tee -a "$RUNNER_TEMP/release.log"
           ls -la "$RUNNER_TEMP/export"
 
+      # Deliberately no `release-notes`. Setting it makes the action poll App Store Connect
+      # for the build's beta localization record so it has somewhere to write the text —
+      # and Apple does not create that record promptly for a brand new app. Build 3
+      # uploaded and processed as VALID, then the job failed after ten minutes of
+      # "Localization not ready", which reads as a failed release when the build is
+      # actually sitting in TestFlight. The notes are cosmetic; a red X on a shipped build
+      # is not. Type them in App Store Connect if they ever matter.
       - name: Upload to TestFlight
         uses: apple-actions/upload-testflight-build@v4
         with:
@@ -166,8 +173,6 @@ jobs:
           issuer-id: ${{ secrets.ASC_ISSUER_ID }}
           api-key-id: ${{ secrets.ASC_KEY_ID }}
           api-private-key: ${{ secrets.ASC_KEY_P8 }}
-          # `inputs` is empty on a tag push, so fall back to the tag name.
-          release-notes: ${{ inputs.notes || format('Build from {0}', github.ref_name) }}
           uses-non-exempt-encryption: false
 
       - name: Keep the IPA for debugging
