@@ -14,8 +14,10 @@ name: Release to TestFlight
 #                    multi-line values, and the upload action expects PEM text.
 #   TEAM_ID        — the 10-character Apple Developer team ID
 #
-# NOTE: the API key must have the App Manager role. A Developer-role key
-# authenticates fine and then fails the upload with an opaque "unauthorized".
+# NOTE: the API key must have the **Admin** role. Anything less authenticates fine, creates
+# provisioning profiles fine, and then fails the export with "Cloud signing permission
+# error" — access to cloud-managed distribution certificates is Admin-only and cannot be
+# granted separately. See https://developer.apple.com/forums/thread/698117
 
 on:
   workflow_dispatch:

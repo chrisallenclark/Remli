@@ -47,10 +47,14 @@ This is what lets the build server sign the app and upload it without a Mac.
 1. Go to <https://appstoreconnect.apple.com/access/integrations/api>
 2. Click the **+** next to *Active* (Team Keys tab).
 3. Name it `GitHub Actions`.
-4. **Access role: `App Manager`.**
+4. **Access role: `Admin`.**
 
-   > ⚠️ This one matters. A key with the `Developer` role logs in fine and then fails the
-   > upload with a useless "unauthorized" error. It must be **App Manager**.
+   > ⚠️ This one matters, and `App Manager` is not enough. The build server signs the app
+   > using *cloud-managed distribution certificates*, and Apple only grants access to
+   > those at `Admin` level. An `App Manager` key authenticates, creates provisioning
+   > profiles, and then fails the export with `Cloud signing permission error`. There is
+   > no way to grant just that one permission to a key.
+   > See <https://developer.apple.com/forums/thread/698117>.
 
 5. Click **Generate**, then **Download** the `.p8` file.
 
