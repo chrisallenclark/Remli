@@ -54,12 +54,16 @@ struct IdeaRowView: View {
 
 struct CategoryChip: View {
     let category: IdeaCategory
+    /// Shows "Business › Meal Prep" rather than just "Meal Prep". Off in dense lists, where
+    /// the extra half-line costs more than the parent's name is worth; on in the detail
+    /// view, where knowing which Business this is is the entire point of subfolders.
+    var showsPath: Bool = false
 
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: category.symbolName)
                 .font(.system(size: 10, weight: .medium))
-            Text(category.name)
+            Text(showsPath ? category.displayPath : category.name)
                 .font(Theme.Typography.meta)
         }
         .foregroundStyle(Color(hex: category.colorHex) ?? Theme.Palette.ember)

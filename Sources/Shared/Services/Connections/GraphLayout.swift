@@ -83,6 +83,23 @@ enum GraphLayout {
                 }
             }
 
+            // Gravity towards the centre.
+            //
+            // Without this, a set of ideas with no links between them has only repulsion
+            // acting on it, so every iteration pushes the nodes further apart and they
+            // drift arbitrarily far from the origin — which is exactly the state of the
+            // map after the first few captures, before the connection engine has anything
+            // to connect. The pull is weak enough to be invisible once edges exist, and is
+            // the only thing keeping an unlinked graph on screen.
+            let centre = CGPoint(x: area.width / 2, y: area.height / 2)
+            for index in points.indices {
+                let delta = CGPoint(x: centre.x - points[index].x, y: centre.y - points[index].y)
+                let distance = max(hypot(delta.x, delta.y), 0.01)
+                let force = distance / k * 8
+                displacement[index].x += delta.x / distance * force
+                displacement[index].y += delta.y / distance * force
+            }
+
             // Attraction along edges.
             for (a, b, weight) in springs {
                 let delta = CGPoint(x: points[a].x - points[b].x, y: points[a].y - points[b].y)

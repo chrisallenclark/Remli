@@ -9,6 +9,7 @@ struct IdeaDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var isEditing = false
+    @State private var isMovingToFolder = false
 
     var body: some View {
         ScrollView {
@@ -65,6 +66,12 @@ struct IdeaDetailView: View {
                         Label(idea.pinned ? "Unpin" : "Pin", systemImage: idea.pinned ? "pin.slash" : "pin")
                     }
 
+                    Button {
+                        isMovingToFolder = true
+                    } label: {
+                        Label("Move to folder…", systemImage: "folder")
+                    }
+
                     Divider()
 
                     Button(role: .destructive) {
@@ -78,6 +85,9 @@ struct IdeaDetailView: View {
                 }
             }
         }
+        .sheet(isPresented: $isMovingToFolder) {
+            FolderPickerView(idea: idea)
+        }
     }
 
     private var header: some View {
@@ -88,9 +98,23 @@ struct IdeaDetailView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: Theme.Space.xs) {
-                if let category = idea.category {
-                    CategoryChip(category: category)
+                // The chip is the control. Filing is something you reconsider while looking
+                // at the idea, so the affordance belongs on the thing that shows where it
+                // is currently filed rather than buried in the overflow menu — which also
+                // still offers it, for when the idea has no folder to tap.
+                Button {
+                    isMovingToFolder = true
+                } label: {
+                    if let category = idea.category {
+                        CategoryChip(category: category, showsPath: true)
+                    } else {
+                        Label("Add to folder", systemImage: "folder.badge.plus")
+                            .font(Theme.Typography.meta)
+                            .foregroundStyle(Theme.Palette.inkMuted)
+                    }
                 }
+                .buttonStyle(.plain)
+
                 Text(idea.createdAt, format: .dateTime.day().month(.abbreviated).hour().minute())
                     .font(Theme.Typography.meta)
                     .foregroundStyle(Theme.Palette.inkMuted)

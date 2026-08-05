@@ -27,12 +27,31 @@ final class IdeaCategory {
     @Relationship(deleteRule: .nullify, inverse: \Idea.category)
     var ideas: [Idea]?
 
-    init(name: String, colorHex: String? = nil, symbolName: String = "lightbulb") {
+    /// The folder this one sits inside, if any.
+    ///
+    /// Emergent categories answer "what kind of thing is this" — Business, Health, Music.
+    /// They do not answer "which of my three businesses". A second level does, without
+    /// making the first capture of the day ask you to pick a project first: the model still
+    /// files into a top-level folder, and you sort the inside out later, once there is
+    /// enough there to be worth sorting.
+    ///
+    /// Deliberately one level of nesting only (enforced in the picker, not the model —
+    /// a stored constraint would be a migration the day it needs relaxing). Deeper trees
+    /// are a filing system, and a filing system is the thing this app exists to replace.
+    var parent: IdeaCategory?
+
+    @Relationship(deleteRule: .nullify, inverse: \IdeaCategory.parent)
+    var children: [IdeaCategory]?
+
+    init(name: String, colorHex: String? = nil, symbolName: String = "lightbulb", parent: IdeaCategory? = nil) {
         self.id = UUID()
         self.createdAt = .now
         self.name = name
         self.symbolName = symbolName
-        self.colorHex = colorHex ?? Self.suggestedColor(for: name)
+        self.parent = parent
+        // A subfolder inherits its parent's colour, so a glance at the list still reads as
+        // "these three things are all Business" before you read a single word.
+        self.colorHex = colorHex ?? parent?.colorHex ?? Self.suggestedColor(for: name)
     }
 }
 
@@ -63,4 +82,58 @@ extension IdeaCategory {
     }
 
     var ideaCount: Int { ideas?.count ?? 0 }
+
+    // MARK: - Hierarchy
+
+    /// How deep this sits. 0 for a top-level folder.
+    ///
+    /// Every walk up the chain is bounded. A parent cycle should be impossible — the picker
+    /// refuses to create one — but a corrupt or badly merged CloudKit record must not be
+    /// able to hang the UI, and these run inside view bodies.
+    var depth: Int {
+        var count = 0
+        var current = parent
+        while let node = current, count < 8 {
+            count += 1
+            current = node.parent
+        }
+        return count
+    }
+
+    var isRoot: Bool { parent == nil }
+
+    /// The top-level folder this belongs to — itself, when it is already top-level.
+    var rootFolder: IdeaCategory {
+        var current = self
+        var guardCount = 0
+        while let next = current.parent, guardCount < 8 {
+            current = next
+            guardCount += 1
+        }
+        return current
+    }
+
+    var sortedChildren: [IdeaCategory] {
+        (children ?? []).sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    /// "Business › Meal Prep", or just "Business" at the top level.
+    var displayPath: String {
+        guard let parent else { return name }
+        return "\(parent.name) › \(name)"
+    }
+
+    /// Ideas filed here plus everything in the subfolders, which is what a count next to a
+    /// parent folder has to mean — otherwise "Business 0" sits above three subfolders that
+    /// between them hold everything.
+    var totalIdeaCount: Int {
+        ideaCount + (children ?? []).reduce(0) { $0 + $1.ideaCount }
+    }
+
+    /// True when `other` is this folder or one of its subfolders. Used to keep the picker
+    /// from reparenting a folder into its own descendant.
+    func contains(_ other: IdeaCategory) -> Bool {
+        if other.id == id { return true }
+        return (children ?? []).contains { $0.id == other.id }
+    }
 }

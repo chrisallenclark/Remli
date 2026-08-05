@@ -10,7 +10,7 @@ enum SmartCollection: Identifiable, Equatable, Hashable {
     case quickWins
     case inProgress
     case tasks
-    case category(id: UUID, name: String)
+    case category(id: UUID, name: String, isSubfolder: Bool)
 
     var id: String {
         switch self {
@@ -18,7 +18,7 @@ enum SmartCollection: Identifiable, Equatable, Hashable {
         case .quickWins: return "quick"
         case .inProgress: return "progress"
         case .tasks: return "tasks"
-        case .category(let id, _): return "cat.\(id.uuidString)"
+        case .category(let id, _, _): return "cat.\(id.uuidString)"
         }
     }
 
@@ -28,7 +28,7 @@ enum SmartCollection: Identifiable, Equatable, Hashable {
         case .quickWins: return "Quick wins"
         case .inProgress: return "In progress"
         case .tasks: return "To-dos"
-        case .category(_, let name): return name
+        case .category(_, let name, _): return name
         }
     }
 
@@ -38,7 +38,9 @@ enum SmartCollection: Identifiable, Equatable, Hashable {
         case .quickWins: return "bolt"
         case .inProgress: return "circle.lefthalf.filled"
         case .tasks: return "checkmark.circle"
-        case .category: return "folder"
+        // A subfolder chip sits immediately after its parent's, so the distinct glyph is
+        // what stops "Business, Meal Prep, Bartending, Health" reading as four peers.
+        case .category(_, _, let isSubfolder): return isSubfolder ? "arrow.turn.down.right" : "folder"
         }
     }
 
@@ -59,8 +61,14 @@ enum SmartCollection: Identifiable, Equatable, Hashable {
             return idea.status == .active
         case .tasks:
             return idea.kind == .task && idea.status != .done
-        case .category(let id, _):
-            return idea.category?.id == id
+        case .category(let id, _, let isSubfolder):
+            guard let category = idea.category else { return false }
+            if category.id == id { return true }
+            // A parent folder shows everything underneath it. Selecting "Business" and
+            // being shown nothing, because all three ideas now live in subfolders, would
+            // punish you for organising. Nesting is capped at one level, so one hop up is
+            // the whole hierarchy.
+            return isSubfolder ? false : category.parent?.id == id
         }
     }
 
@@ -76,37 +84,75 @@ enum SmartCollection: Identifiable, Equatable, Hashable {
         }
 
         // Categories ordered by how much is in them, so the ones actually being used sit
-        // where they can be reached.
+        // where they can be reached, with each folder's subfolders directly after it.
         //
         // A named struct rather than a labelled tuple: chaining map/sorted over an
         // anonymous tuple is reliably enough to time out the expression type checker.
         struct Tally {
             var id: UUID
             var name: String
-            var count: Int
+            var parentID: UUID?
+            /// Includes subfolders, which is what orders a parent correctly once its ideas
+            /// have all been moved down a level.
+            var total: Int
         }
 
         var counts: [UUID: Tally] = [:]
+
         for idea in ideas {
             guard let category = idea.category else { continue }
-            if var existing = counts[category.id] {
-                existing.count += 1
-                counts[category.id] = existing
-            } else {
-                counts[category.id] = Tally(id: category.id, name: category.name, count: 1)
+
+            if counts[category.id] == nil {
+                counts[category.id] = Tally(
+                    id: category.id,
+                    name: category.name,
+                    parentID: category.parent?.id,
+                    total: 0
+                )
+            }
+            counts[category.id]?.total += 1
+
+            // A parent whose ideas all live in its subfolders still deserves a chip, so it
+            // is registered here even though no idea points at it directly.
+            if let parent = category.parent {
+                if counts[parent.id] == nil {
+                    counts[parent.id] = Tally(
+                        id: parent.id,
+                        name: parent.name,
+                        parentID: nil,
+                        total: 0
+                    )
+                }
+                counts[parent.id]?.total += 1
             }
         }
 
-        var tallies = Array(counts.values)
-        tallies.sort { lhs, rhs in
-            if lhs.count == rhs.count {
-                return lhs.name < rhs.name
+        func ordered(_ tallies: [Tally]) -> [Tally] {
+            var copy = tallies
+            copy.sort { lhs, rhs in
+                if lhs.total == rhs.total {
+                    return lhs.name < rhs.name
+                }
+                return lhs.total > rhs.total
             }
-            return lhs.count > rhs.count
+            return copy
         }
 
-        for tally in tallies {
-            result.append(.category(id: tally.id, name: tally.name))
+        var roots: [Tally] = []
+        for tally in counts.values where tally.parentID == nil {
+            roots.append(tally)
+        }
+
+        for root in ordered(roots) {
+            result.append(.category(id: root.id, name: root.name, isSubfolder: false))
+
+            var children: [Tally] = []
+            for tally in counts.values where tally.parentID == root.id {
+                children.append(tally)
+            }
+            for child in ordered(children) {
+                result.append(.category(id: child.id, name: child.name, isSubfolder: true))
+            }
         }
 
         return result
