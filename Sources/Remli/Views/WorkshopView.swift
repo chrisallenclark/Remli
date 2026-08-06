@@ -321,9 +321,14 @@ struct WorkshopView: View {
         // two-argument form, where defaults do not apply.
         let relatedSummaries = related.map { IdeaSummary($0) }
         let intelligence = IntelligenceFactory.make()
+        engineName = intelligence.displayName
 
         do {
-            development = try await intelligence.developIdea(summary, related: relatedSummaries)
+            development = try await intelligence.developIdea(
+                summary,
+                related: relatedSummaries,
+                avoiding: idea.dismissedSuggestions
+            )
         } catch {
             failed = true
         }
