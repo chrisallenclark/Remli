@@ -297,6 +297,10 @@ private struct StepPicker: View {
     let goal: Idea
     let candidates: [Idea]
 
+    /// Passed in so a newly added step lands at the end of the roadmap rather than the
+    /// start — every step sharing rank zero would collapse the order back to creation date.
+    let existingStepCount: Int
+
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
 
