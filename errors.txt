@@ -1,0 +1,12 @@
+/Users/runner/work/Remli/Remli/Sources/Shared/Services/Intelligence/IntelligenceFactory.swift:63:55: warning: main actor-isolated static property 'shared' can not be referenced from a nonisolated context; this is an error in the Swift 6 language mode
+/Users/runner/work/Remli/Remli/Sources/Shared/Services/Connections/Similarity.swift:87:16: warning: result of call to 'withUnsafeMutableBytes' is unused
+/Users/runner/work/Remli/Remli/Sources/Shared/Services/Intelligence/IntelligenceFactory.swift:63:55: warning: main actor-isolated static property 'shared' can not be referenced from a nonisolated context; this is an error in the Swift 6 language mode
+/Users/runner/work/Remli/Remli/Sources/Remli/Views/WorkshopView.swift:326:96: error: missing argument for parameter 'avoiding' in call
+/Users/runner/work/Remli/Remli/Sources/Remli/Views/WorkshopView.swift:327:11: warning: 'catch' block is unreachable because no errors are thrown in 'do' block
+/Users/runner/work/Remli/Remli/Sources/Shared/Services/Intelligence/IntelligenceFactory.swift:63:55: warning: main actor-isolated static property 'shared' can not be referenced from a nonisolated context; this is an error in the Swift 6 language mode
+/Users/runner/work/Remli/Remli/Sources/Shared/Services/Resurfacing/NotificationRouter.swift:35:26: warning: capture of 'userInfo' with non-Sendable type '[AnyHashable : Any]' in a '@Sendable' closure; this is an error in the Swift 6 language mode
+/Users/runner/work/Remli/Remli/Sources/Shared/Services/Resurfacing/ResurfacingCoordinator.swift:167:36: warning: main actor-isolated static property 'refreshTaskIdentifier' can not be referenced from a nonisolated context; this is an error in the Swift 6 language mode
+/Users/runner/work/Remli/Remli/Sources/Shared/Services/Resurfacing/ResurfacingCoordinator.swift:187:59: warning: main actor-isolated static property 'refreshTaskIdentifier' can not be referenced from a nonisolated context; this is an error in the Swift 6 language mode
+/Users/runner/work/Remli/Remli/Sources/Shared/Services/Intelligence/IntelligenceFactory.swift:63:55: warning: main actor-isolated static property 'shared' can not be referenced from a nonisolated context; this is an error in the Swift 6 language mode
+** BUILD FAILED **
+The following build commands failed:

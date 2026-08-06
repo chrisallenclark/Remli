@@ -1,0 +1,150 @@
+SwiftCompile normal arm64 /Users/runner/work/Remli/Remli/Sources/Remli/Views/CaptureSheet.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal arm64 /Users/runner/work/Remli/Remli/Sources/Remli/Views/ClaudeConsentView.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal arm64 /Users/runner/work/Remli/Remli/Sources/Shared/Services/Intelligence/ClaudeIntelligence.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal arm64 /Users/runner/work/Remli/Remli/Sources/Shared/Services/Connections/ConnectionEngine.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal arm64 /Users/runner/work/Remli/Remli/Sources/Remli/Views/ConnectionsSection.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal arm64 /Users/runner/work/Remli/Remli/Sources/Shared/Services/Connections/EmbeddingService.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal arm64 /Users/runner/work/Remli/Remli/Sources/Shared/Services/Intelligence/EnrichmentService.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal arm64 /Users/runner/work/Remli/Remli/Sources/Shared/Models/Enums.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal arm64 /Users/runner/work/Remli/Remli/Sources/Shared/Services/FeatureFlags.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal arm64 /Users/runner/work/Remli/Remli/Sources/Shared/Services/Intelligence/FoundationModelsIntelligence.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal arm64 /Users/runner/work/Remli/Remli/Sources/Shared/Services/Resurfacing/FreeTimeFinder.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal arm64 /Users/runner/work/Remli/Remli/Sources/Shared/Services/Connections/GraphLayout.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal arm64 /Users/runner/work/Remli/Remli/Sources/Shared/Services/Intelligence/HeuristicIntelligence.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal arm64 /Users/runner/work/Remli/Remli/Sources/Shared/Models/Idea.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal arm64 /Users/runner/work/Remli/Remli/Sources/Shared/Models/IdeaCategory.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal arm64 /Users/runner/work/Remli/Remli/Sources/Remli/Views/IdeaDetailView.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal x86_64 Compiling\ BufferConverter.swift,\ CaptureRoute.swift,\ CaptureSheet.swift,\ ClaudeConsentView.swift,\ ClaudeIntelligence.swift,\ ConnectionEngine.swift,\ ConnectionsSection.swift,\ EmbeddingService.swift,\ EnrichmentService.swift,\ Enums.swift,\ FeatureFlags.swift,\ FoundationModelsIntelligence.swift,\ FreeTimeFinder.swift,\ GraphLayout.swift,\ HeuristicIntelligence.swift,\ Idea.swift,\ IdeaCategory.swift,\ IdeaDetailView.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Speech/BufferConverter.swift /Users/runner/work/Remli/Remli/Sources/Shared/Intents/CaptureRoute.swift /Users/runner/work/Remli/Remli/Sources/Remli/Views/CaptureSheet.swift /Users/runner/work/Remli/Remli/Sources/Remli/Views/ClaudeConsentView.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Intelligence/ClaudeIntelligence.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Connections/ConnectionEngine.swift /Users/runner/work/Remli/Remli/Sources/Remli/Views/ConnectionsSection.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Connections/EmbeddingService.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Intelligence/EnrichmentService.swift /Users/runner/work/Remli/Remli/Sources/Shared/Models/Enums.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/FeatureFlags.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Intelligence/FoundationModelsIntelligence.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Resurfacing/FreeTimeFinder.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Connections/GraphLayout.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Intelligence/HeuristicIntelligence.swift /Users/runner/work/Remli/Remli/Sources/Shared/Models/Idea.swift /Users/runner/work/Remli/Remli/Sources/Shared/Models/IdeaCategory.swift /Users/runner/work/Remli/Remli/Sources/Remli/Views/IdeaDetailView.swift (in target 'Remli' from project 'Remli')
+
+SwiftCompile normal x86_64 /Users/runner/work/Remli/Remli/Sources/Shared/Services/Speech/BufferConverter.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/Remli/Remli/Sources/Shared/Intents/CaptureRoute.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/Remli/Remli/Sources/Remli/Views/CaptureSheet.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/Remli/Remli/Sources/Remli/Views/ClaudeConsentView.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/Remli/Remli/Sources/Shared/Services/Intelligence/ClaudeIntelligence.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/Remli/Remli/Sources/Shared/Services/Connections/ConnectionEngine.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/Remli/Remli/Sources/Remli/Views/ConnectionsSection.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/Remli/Remli/Sources/Shared/Services/Connections/EmbeddingService.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/Remli/Remli/Sources/Shared/Services/Intelligence/EnrichmentService.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/Remli/Remli/Sources/Shared/Models/Enums.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/Remli/Remli/Sources/Shared/Services/FeatureFlags.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/Remli/Remli/Sources/Shared/Services/Intelligence/FoundationModelsIntelligence.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/Remli/Remli/Sources/Shared/Services/Resurfacing/FreeTimeFinder.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/Remli/Remli/Sources/Shared/Services/Connections/GraphLayout.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/Remli/Remli/Sources/Shared/Services/Intelligence/HeuristicIntelligence.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/Remli/Remli/Sources/Shared/Models/Idea.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/Remli/Remli/Sources/Shared/Models/IdeaCategory.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/Remli/Remli/Sources/Remli/Views/IdeaDetailView.swift (in target 'Remli' from project 'Remli')
+    cd /Users/runner/work/Remli/Remli
+    
+
+SwiftDriverJobDiscovery normal arm64 Compiling IdeaGraph.swift, IdeaIntelligence.swift, IdeaLink.swift, IdeaRowView.swift, IdeaSearch.swift, IdeasListView.swift, IntelligenceFactory.swift, KeychainStore.swift, MapView.swift, NotificationRouter.swift, NotificationScheduler.swift, RemliApp.swift, RemliSchema.swift, RemliShortcuts.swift, ResurfacingCoordinator.swift, ResurfacingScorer.swift, ResurfacingSettings.swift (in target 'Remli' from project 'Remli')
+
+SwiftCompile normal x86_64 Compiling\ IdeaGraph.swift,\ IdeaIntelligence.swift,\ IdeaLink.swift,\ IdeaRowView.swift,\ IdeaSearch.swift,\ IdeasListView.swift,\ IntelligenceFactory.swift,\ KeychainStore.swift,\ MapView.swift,\ NotificationRouter.swift,\ NotificationScheduler.swift,\ RemliApp.swift,\ RemliSchema.swift,\ RemliShortcuts.swift,\ ResurfacingCoordinator.swift,\ ResurfacingScorer.swift,\ ResurfacingSettings.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Connections/IdeaGraph.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Intelligence/IdeaIntelligence.swift /Users/runner/work/Remli/Remli/Sources/Shared/Models/IdeaLink.swift /Users/runner/work/Remli/Remli/Sources/Remli/Views/IdeaRowView.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Search/IdeaSearch.swift /Users/runner/work/Remli/Remli/Sources/Remli/Views/IdeasListView.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Intelligence/IntelligenceFactory.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Intelligence/KeychainStore.swift /Users/runner/work/Remli/Remli/Sources/Remli/Views/MapView.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Resurfacing/NotificationRouter.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Resurfacing/NotificationScheduler.swift /Users/runner/work/Remli/Remli/Sources/Remli/RemliApp.swift /Users/runner/work/Remli/Remli/Sources/Shared/Models/RemliSchema.swift /Users/runner/work/Remli/Remli/Sources/Remli/Intents/RemliShortcuts.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Resurfacing/ResurfacingCoordinator.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Resurfacing/ResurfacingScorer.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Resurfacing/ResurfacingSettings.swift (in target 'Remli' from project 'Remli')
+
+** BUILD FAILED **
+
+
+The following build commands failed:
+	SwiftCompile normal arm64 /Users/runner/work/Remli/Remli/Sources/Remli/Views/WorkshopView.swift (in target 'Remli' from project 'Remli')
+	SwiftCompile normal arm64 Compiling\ ReviewView.swift,\ RoadmapDetailView.swift,\ RoadmapPreview.swift,\ RoadmapsView.swift,\ RootView.swift,\ SettingsView.swift,\ Similarity.swift,\ SmartCollection.swift,\ SpaceCover.swift,\ SpaceCoverPreset.swift,\ SpacePickerView.swift,\ SpaceView.swift,\ SpacesView.swift,\ Theme.swift,\ VoiceCaptureController.swift,\ WorkshopView.swift,\ GeneratedAssetSymbols.swift /Users/runner/work/Remli/Remli/Sources/Remli/Views/ReviewView.swift /Users/runner/work/Remli/Remli/Sources/Remli/Views/RoadmapDetailView.swift /Users/runner/work/Remli/Remli/Sources/Remli/Views/RoadmapPreview.swift /Users/runner/work/Remli/Remli/Sources/Remli/Views/RoadmapsView.swift /Users/runner/work/Remli/Remli/Sources/Remli/RootView.swift /Users/runner/work/Remli/Remli/Sources/Remli/Views/SettingsView.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Connections/Similarity.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Search/SmartCollection.swift /Users/runner/work/Remli/Remli/Sources/Remli/Views/SpaceCover.swift /Users/runner/work/Remli/Remli/Sources/Shared/Design/SpaceCoverPreset.swift /Users/runner/work/Remli/Remli/Sources/Remli/Views/SpacePickerView.swift /Users/runner/work/Remli/Remli/Sources/Remli/Views/SpaceView.swift /Users/runner/work/Remli/Remli/Sources/Remli/Views/SpacesView.swift /Users/runner/work/Remli/Remli/Sources/Shared/Design/Theme.swift /Users/runner/work/Remli/Remli/Sources/Shared/Services/Speech/VoiceCaptureController.swift /Users/runner/work/Remli/Remli/Sources/Remli/Views/WorkshopView.swift /Users/runner/Library/Developer/Xcode/DerivedData/Remli-gzzxfhfzpedildgqqxgphrqxoeka/Build/Intermediates.noindex/Remli.build/Debug-iphonesimulator/Remli.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'Remli' from project 'Remli')
+	Building project Remli with scheme Remli and configuration Debug
+(3 failures)
