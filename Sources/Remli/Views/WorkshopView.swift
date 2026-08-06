@@ -38,6 +38,14 @@ struct WorkshopView: View {
     @State private var answers: [String: String] = [:]
     @State private var answeredQuestions: Set<String> = []
 
+    /// Questions swapped out for a fresh one, keyed by the original.
+    @State private var replacements: [String: String] = [:]
+    @State private var refreshing: Set<String> = []
+
+    /// Which engine answered. Shown, because the layering hides failure by design.
+    @State private var engineName = ""
+    private var isBasicEngine: Bool { engineName.contains("Basic") }
+
     private var accent: Color {
         idea.category.flatMap { Color(hex: $0.colorHex) } ?? Theme.Palette.ember
     }
@@ -159,6 +167,22 @@ struct WorkshopView: View {
                     .font(Theme.Typography.meta)
                     .foregroundStyle(accent)
             }
+
+            // Says which engine answered.
+            //
+            // The layering is designed to hide failure — when the on-device model breaks,
+            // the heuristic answers and you get plausible output from a fixed list with no
+            // way to tell. That is exactly what happened, and the giveaway was that the
+            // questions never changed however much the idea did. Never again silently.
+            if isBasicEngine {
+                Label(
+                    "Basic prompts — Apple Intelligence isn't answering, so these are generic",
+                    systemImage: "exclamationmark.triangle"
+                )
+                .font(Theme.Typography.meta)
+                .foregroundStyle(Theme.Palette.inkMuted)
+                .padding(.top, Theme.Space.xxs)
+            }
         }
 
         if !related.isEmpty {
@@ -216,7 +240,10 @@ struct WorkshopView: View {
                     isAdded: addedStepIDs.contains(step.id),
                     isDuplicate: existingStepTitles.contains(step.title.lowercased()),
                     onAdd: { add(title: step.title, because: step.reason, id: step.id) },
-                    onDismiss: { _ = dismissedStepIDs.insert(step.id) }
+                    onDismiss: {
+                        dismissedStepIDs.insert(step.id)
+                        remember(step.title)
+                    }
                 )
             }
         }
@@ -229,10 +256,15 @@ struct WorkshopView: View {
                 .foregroundStyle(Theme.Palette.inkMuted)
                 .tracking(0.6)
 
-            ForEach(questions, id: \.self) { question in
+            ForEach(questions, id: \.self) { original in
+                let question = replacements[original] ?? original
+
                 QuestionPrompt(
                     question: question,
                     accent: accent,
+                    isRefreshing: refreshing.contains(original),
+                    canRefresh: !isBasicEngine,
+                    onRefresh: { Task { await refresh(question) } },
                     answer: Binding(
                         get: { answers[question] ?? "" },
                         set: { answers[question] = $0 }
@@ -248,6 +280,34 @@ struct WorkshopView: View {
     }
 
     // MARK: - Actions
+
+    /// Records a rejection so it is never proposed for this idea again.
+    private func remember(_ suggestion: String) {
+        let trimmed = suggestion.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !idea.dismissedSuggestions.contains(trimmed) else { return }
+        idea.dismissedSuggestions.append(trimmed)
+        idea.touch()
+    }
+
+    /// Swaps one question for a different one, remembering the miss.
+    private func refresh(_ question: String) async {
+        refreshing.insert(question)
+        defer { refreshing.remove(question) }
+
+        remember(question)
+
+        let summary = IdeaSummary(idea, excerptLimit: 1500)
+        let relatedSummaries = related.map { IdeaSummary($0) }
+        let shown = (development?.questions ?? []) + Array(replacements.values)
+
+        if let fresh = try? await IntelligenceFactory.make().anotherQuestion(
+            for: summary,
+            related: relatedSummaries,
+            avoiding: Array(Set(shown + idea.dismissedSuggestions))
+        ) {
+            replacements[question] = fresh
+        }
+    }
 
     private func think() async {
         isThinking = true
@@ -389,6 +449,10 @@ private struct QuestionPrompt: View {
 
     let question: String
     let accent: Color
+    let isRefreshing: Bool
+    /// False on the basic engine, which has a fixed list and nothing else to offer.
+    let canRefresh: Bool
+    var onRefresh: () -> Void
     @Binding var answer: String
     let isAnswered: Bool
     var onSubmit: (String) -> Void
@@ -399,11 +463,31 @@ private struct QuestionPrompt: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.xs) {
-            Text(question)
-                .font(Theme.Typography.ideaBody)
-                .foregroundStyle(Theme.Palette.ink)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
+            HStack(alignment: .top, spacing: Theme.Space.xs) {
+                Text(question)
+                    .font(Theme.Typography.ideaBody)
+                    .foregroundStyle(Theme.Palette.ink)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer(minLength: 0)
+
+                // A question that misses is not a failure worth a whole new session — it is
+                // one bad guess out of four, and swapping it costs a single call.
+                if canRefresh, !isAnswered {
+                    Button(action: onRefresh) {
+                        if isRefreshing {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(Theme.Palette.inkMuted)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isRefreshing)
+                }
+            }
 
             if isAnswered {
                 Label("Added to the roadmap", systemImage: "checkmark")

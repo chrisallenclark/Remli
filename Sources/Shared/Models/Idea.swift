@@ -62,6 +62,15 @@ final class Idea {
     /// Where this sits among a goal's steps. Only meaningful for roadmap steps.
     var stepOrder: Int = 0
 
+    /// Steps and questions turned down in the workshop.
+    ///
+    /// Kept per-idea rather than globally: "who is your first customer" is a lazy question
+    /// about a finished product and the right question about a new one, so a rejection here
+    /// says something about *this* idea, not about the question. Fed back into the prompt so
+    /// the same miss is never offered twice, which is the whole of the learning loop —
+    /// dismissals are the only signal given for free.
+    var dismissedSuggestions: [String] = []
+
     // MARK: Resurfacing state
 
     /// Set when the user explicitly snoozes an idea to a date.

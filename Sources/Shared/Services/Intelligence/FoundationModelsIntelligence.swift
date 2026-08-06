@@ -236,6 +236,168 @@ struct FoundationModelsIntelligence: IdeaIntelligence {
         guard case .available = SystemLanguageModel.default.availability else { return }
         LanguageModelSession(instructions: instructions).prewarm()
     }
+
+    // MARK: - Working an idea forward
+
+    // Two calls, each with exactly one array, declared here beside the shapes that already
+    // work in production.
+    //
+    // The first version asked for a restatement, steps and questions in one response with
+    // two arrays in a single @Generable. It compiled and then failed at runtime every time,
+    // falling silently through to the heuristic — which is why the questions never changed
+    // no matter what the idea said. Mirroring `LinkJudgement`, which has worked since the
+    // day it shipped, is worth more than saving a round trip.
+
+    @Generable
+    struct QuestionSet {
+        @Guide(description: "Questions whose answers would genuinely unblock this idea. Ask about what cannot be known from the text: who exactly it is for, the cheapest way to test it, what would make it fail, what is being assumed. Never ask something the idea already answers.", .maximumCount(4))
+        var questions: [String]
+    }
+
+    @Generable
+    struct StepDraft {
+        @Guide(description: "An action starting with a verb, under ten words, specific enough that it could not have been written about a different idea.")
+        var title: String
+
+        @Guide(description: "One short sentence on why this comes now rather than later.")
+        var reason: String
+    }
+
+    @Generable
+    struct StepSet {
+        @Guide(description: "Concrete things to do next, smallest first, each doable in an afternoon. If it is unclear what the idea actually is, return an empty list rather than guessing.", .maximumCount(5))
+        var steps: [StepDraft]
+    }
+
+    func developIdea(
+        _ idea: IdeaSummary,
+        related: [IdeaSummary],
+        avoiding rejected: [String]
+    ) async throws -> IdeaDevelopment {
+        guard isAvailable else { throw IntelligenceError.unavailable }
+
+        let context = Self.developmentContext(for: idea, related: related, avoiding: rejected)
+
+        // Questions first, and they are the part that must not fail: they assume nothing
+        // about the idea, so they stay useful even when the model only half understands it.
+        // Steps are attempted separately and allowed to come back empty.
+        let questionSet = try await LanguageModelSession(instructions: Self.questionInstructions)
+            .respond(
+                to: context,
+                generating: QuestionSet.self,
+                options: GenerationOptions(temperature: 0.8)
+            ).content
+
+        let questions = questionSet.questions
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        var steps: [DevelopmentStep] = []
+        if let stepSet = try? await LanguageModelSession(instructions: Self.stepInstructions)
+            .respond(
+                to: context,
+                generating: StepSet.self,
+                options: GenerationOptions(temperature: 0.6)
+            ).content {
+            steps = stepSet.steps
+                .map {
+                    DevelopmentStep(
+                        title: $0.title.trimmingCharacters(in: .whitespacesAndNewlines),
+                        reason: $0.reason.trimmingCharacters(in: .whitespacesAndNewlines)
+                    )
+                }
+                .filter { !$0.title.isEmpty }
+        }
+
+        guard !questions.isEmpty || !steps.isEmpty else {
+            throw IntelligenceError.unusableResult
+        }
+
+        return IdeaDevelopment(restatement: idea.title, steps: steps, questions: questions)
+    }
+
+    /// One more question, for when a proposed one misses.
+    func anotherQuestion(
+        for idea: IdeaSummary,
+        related: [IdeaSummary],
+        avoiding existing: [String]
+    ) async throws -> String {
+        guard isAvailable else { throw IntelligenceError.unavailable }
+
+        let set = try await LanguageModelSession(instructions: Self.questionInstructions)
+            .respond(
+                to: Self.developmentContext(for: idea, related: related, avoiding: existing),
+                generating: QuestionSet.self,
+                // Hotter than the first pass on purpose: the previous question was
+                // rejected, so the most probable next one is a rephrasing of it.
+                options: GenerationOptions(temperature: 1.0)
+            ).content
+
+        guard
+            let question = set.questions
+                .map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) })
+                .first(where: { !$0.isEmpty })
+        else { throw IntelligenceError.unusableResult }
+
+        return question
+    }
+
+    private static let questionInstructions = """
+        You ask the questions that would move someone's own idea forward.
+
+        Some ideas are three words long or named with a joke. If you cannot tell what the \
+        thing actually is, ask that first — "what would this actually involve day to day?" \
+        is worth more than four confident questions about a business you invented.
+
+        Every question must be answerable in a sentence, and answering it must change what \
+        they do next. Never ask anything the idea already answers, and never ask something \
+        you could have asked about any idea at all.
+        """
+
+    private static let stepInstructions = """
+        You propose the next concrete actions on someone's own idea.
+
+        Each step is an action starting with a verb, doable in an afternoon, and specific \
+        enough that it could not have been written about a different idea.
+
+        Never suggest research, brainstorming, validation, or "define your goals". If you \
+        cannot tell what the idea actually is, return no steps at all — a confident step \
+        built on a guess is worse than an empty list, because they will follow it.
+        """
+
+    private static func developmentContext(
+        for idea: IdeaSummary,
+        related: [IdeaSummary],
+        avoiding rejected: [String]
+    ) -> String {
+        var prompt = "The idea:\n\(idea.title)\n\(idea.excerpt)"
+
+        // Everything cheap that disambiguates a short or oddly-named idea. Without this the
+        // model reads a pun with no context and fills the gap with invention.
+        if let space = idea.spaceName {
+            prompt += "\n\nFiled under: \(space)"
+        }
+        if !idea.tags.isEmpty {
+            prompt += "\nTagged: \(idea.tags.joined(separator: ", "))"
+        }
+
+        if !related.isEmpty {
+            let list = related.prefix(6)
+                .map { "- \($0.title): \($0.excerpt)" }
+                .joined(separator: "\n")
+            prompt += "\n\nOther ideas of theirs that connect to this:\n\(list)"
+        }
+
+        if !rejected.isEmpty {
+            // The learning loop. Dismissals are the only signal given for free, and
+            // repeating something already rejected is the fastest way to teach someone
+            // that the feature is not listening.
+            let list = rejected.suffix(12).map { "- \($0)" }.joined(separator: "\n")
+            prompt += "\n\nAlready rejected — do not repeat these or anything close to them:\n\(list)"
+        }
+
+        return prompt
+    }
 }
 
 // MARK: - Normalisation
@@ -294,123 +456,5 @@ private extension FoundationModelsIntelligence.Draft {
         }
 
         return Array(result.prefix(4))
-    }
-}
-
-extension FoundationModelsIntelligence {
-
-    // MARK: - Working an idea forward
-
-    @Generable
-    struct DevelopmentDraft {
-
-        @Guide(description: "The idea said back in one plain sentence. Strip the hedging and the thinking-out-loud, keep the substance. Do not add anything that was not there.")
-        var restatement: String
-
-        @Guide(description: "Concrete things to do next, smallest first. Each must be doable in an afternoon and specific to this idea — never generic advice like 'do market research'.", .maximumCount(5))
-        var steps: [StepDraft]
-
-        @Guide(description: "Questions whose answers would genuinely unblock this. Ask about the things you cannot know: who it is for, what the cheapest test is, what would make it fail. Never ask something the idea already answers.", .maximumCount(3))
-        var questions: [String]
-    }
-
-    @Generable
-    struct StepDraft {
-        @Guide(description: "An action, starting with a verb. Under ten words.")
-        var title: String
-
-        @Guide(description: "One short sentence on why this step comes now rather than later.")
-        var reason: String
-    }
-
-    func developIdea(_ idea: IdeaSummary, related: [IdeaSummary]) async throws -> IdeaDevelopment {
-        guard isAvailable else { throw IntelligenceError.unavailable }
-
-        let session = LanguageModelSession(instructions: Self.developmentInstructions)
-
-        let draft = try await session.respond(
-            to: Self.developmentPrompt(for: idea, related: related),
-            generating: DevelopmentDraft.self,
-            // Warmer than filing. Filing should be repeatable; this should be useful, and
-            // the interesting step is rarely the most probable one.
-            options: GenerationOptions(temperature: 0.7)
-        ).content
-
-        let steps = draft.steps
-            .map { step in
-                DevelopmentStep(
-                    title: step.title.trimmingCharacters(in: .whitespacesAndNewlines),
-                    reason: step.reason.trimmingCharacters(in: .whitespacesAndNewlines)
-                )
-            }
-            .filter { !$0.title.isEmpty }
-
-        let questions = draft.questions
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-
-        let restatement = draft.restatement.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !steps.isEmpty || !questions.isEmpty else {
-            throw IntelligenceError.unusableResult
-        }
-
-        return IdeaDevelopment(
-            restatement: restatement.isEmpty ? idea.title : restatement,
-            steps: steps,
-            questions: questions
-        )
-    }
-
-    private static let developmentInstructions = """
-        You help someone move one of their own ideas forward.
-
-        You are not a consultant and you are not writing a business plan. Everything you \
-        suggest must be small enough to start this week and specific enough that they could \
-        not have written it about any other idea.
-
-        IMPORTANT: some ideas are a few words long, or named with a joke or a pun. If you \
-        cannot tell what the thing actually is or who it is for, do not guess and do not \
-        invent a business around the name. Ask. A question like "what does this actually \
-        involve day to day?" is far more useful than five confident steps for the wrong \
-        idea. Suggest no steps at all rather than steps built on a guess.
-
-        Never suggest research, brainstorming, or "define your goals". Never pad the list — \
-        two real steps beat five vague ones. If their other ideas are relevant, refer to \
-        them by name.
-        """
-
-    private static func developmentPrompt(for idea: IdeaSummary, related: [IdeaSummary]) -> String {
-        var prompt = """
-            The idea:
-            \(idea.title)
-            \(idea.excerpt)
-            """
-
-        // Everything cheap that disambiguates a short or oddly-named idea. Without this the
-        // model is reading a pun with no context and filling the gap with invention.
-        if let space = idea.spaceName {
-            prompt += "\n\nFiled under: \(space)"
-        }
-        if !idea.tags.isEmpty {
-            prompt += "\nTagged: \(idea.tags.joined(separator: ", "))"
-        }
-
-        if !related.isEmpty {
-            // Their own material. This is the difference between a generic plan and one
-            // that can say "you already thought of this".
-            let list = related.prefix(6)
-                .map { "- \($0.title): \($0.excerpt)" }
-                .joined(separator: "\n")
-
-            prompt += """
-
-
-                Other ideas they have already captured that connect to this one:
-                \(list)
-                """
-        }
-
-        return prompt
     }
 }

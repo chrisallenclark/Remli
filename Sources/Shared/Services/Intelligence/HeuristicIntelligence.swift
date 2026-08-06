@@ -139,7 +139,11 @@ struct HeuristicIntelligence: IdeaIntelligence {
     /// like help and teaches the person that the feature is filler. Questions do not have
     /// that problem. They make no claim about the idea, and answering one produces a step
     /// the person wrote themselves, which was always the better step anyway.
-    func developIdea(_ idea: IdeaSummary, related: [IdeaSummary]) async throws -> IdeaDevelopment {
+    func developIdea(
+        _ idea: IdeaSummary,
+        related: [IdeaSummary],
+        avoiding rejected: [String]
+    ) async throws -> IdeaDevelopment {
         var questions = [
             "What is the smallest version of this you could put in front of one person this week?",
             "Who is the first person who would use this, by name?",
@@ -152,10 +156,25 @@ struct HeuristicIntelligence: IdeaIntelligence {
             questions.append("Does \(first.title) belong inside this, or is it a separate thing?")
         }
 
+        // Anything already turned down is dropped rather than asked again. With a fixed
+        // list that eventually empties, which is honest: this provider has nothing else.
+        let rejectedSet = Set(rejected.map { $0.lowercased() })
+        questions.removeAll { rejectedSet.contains($0.lowercased()) }
+
         return IdeaDevelopment(
             restatement: idea.title,
             steps: [],
             questions: questions
         )
+    }
+
+    /// There is no "another" here — the list is fixed. Declining is the truthful answer,
+    /// and the caller leaves the question in place rather than swapping in a duplicate.
+    func anotherQuestion(
+        for idea: IdeaSummary,
+        related: [IdeaSummary],
+        avoiding existing: [String]
+    ) async throws -> String {
+        throw IntelligenceError.unavailable
     }
 }

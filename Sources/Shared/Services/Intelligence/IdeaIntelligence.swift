@@ -141,7 +141,18 @@ protocol IdeaIntelligence: Sendable {
     /// `related` is the person's own material — ideas already linked to this one. Passing
     /// it is what separates this from asking a chatbot for a project plan: the steps can
     /// refer to things they have actually thought of.
-    func developIdea(_ idea: IdeaSummary, related: [IdeaSummary]) async throws -> IdeaDevelopment
+    func developIdea(
+        _ idea: IdeaSummary,
+        related: [IdeaSummary],
+        avoiding rejected: [String]
+    ) async throws -> IdeaDevelopment
+
+    /// A replacement for a question that missed.
+    func anotherQuestion(
+        for idea: IdeaSummary,
+        related: [IdeaSummary],
+        avoiding existing: [String]
+    ) async throws -> String
 }
 
 extension IdeaIntelligence {
@@ -150,7 +161,19 @@ extension IdeaIntelligence {
     /// to the next one. Adding a capability to the protocol should never break a provider
     /// that has not implemented it — the layering exists precisely so capabilities can
     /// arrive unevenly.
-    func developIdea(_ idea: IdeaSummary, related: [IdeaSummary]) async throws -> IdeaDevelopment {
+    func developIdea(
+        _ idea: IdeaSummary,
+        related: [IdeaSummary],
+        avoiding rejected: [String]
+    ) async throws -> IdeaDevelopment {
+        throw IntelligenceError.unavailable
+    }
+
+    func anotherQuestion(
+        for idea: IdeaSummary,
+        related: [IdeaSummary],
+        avoiding existing: [String]
+    ) async throws -> String {
         throw IntelligenceError.unavailable
     }
 }
@@ -215,12 +238,16 @@ struct LayeredIntelligence: IdeaIntelligence {
         throw lastError
     }
 
-    func developIdea(_ idea: IdeaSummary, related: [IdeaSummary]) async throws -> IdeaDevelopment {
+    func developIdea(
+        _ idea: IdeaSummary,
+        related: [IdeaSummary],
+        avoiding rejected: [String]
+    ) async throws -> IdeaDevelopment {
         var lastError: Error = IntelligenceError.unavailable
 
         for provider in providers where provider.isAvailable {
             do {
-                return try await provider.developIdea(idea, related: related)
+                return try await provider.developIdea(idea, related: related, avoiding: rejected)
             } catch {
                 lastError = error
                 continue
@@ -228,5 +255,34 @@ struct LayeredIntelligence: IdeaIntelligence {
         }
 
         throw lastError
+    }
+
+    func anotherQuestion(
+        for idea: IdeaSummary,
+        related: [IdeaSummary],
+        avoiding existing: [String]
+    ) async throws -> String {
+        var lastError: Error = IntelligenceError.unavailable
+
+        for provider in providers where provider.isAvailable {
+            do {
+                return try await provider.anotherQuestion(for: idea, related: related, avoiding: existing)
+            } catch {
+                lastError = error
+                continue
+            }
+        }
+
+        throw lastError
+    }
+
+    /// Which provider is actually answering right now.
+    ///
+    /// Surfaced in the workshop because the layering hides failure by design: when the
+    /// on-device model breaks, the heuristic answers and the person sees plausible-looking
+    /// output with no way to tell it came from a lookup table. That is exactly what
+    /// happened, and it cost two builds to notice.
+    var activeProviderName: String {
+        providers.first { $0.isAvailable }?.displayName ?? "Unavailable"
     }
 }
