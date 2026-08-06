@@ -59,6 +59,10 @@ struct WorkshopView: View {
         return result
     }
 
+    private var existingStepCount: Int {
+        (idea.incomingLinks ?? []).filter { $0.isActive && $0.kind == .prerequisiteFor }.count
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -249,7 +253,9 @@ struct WorkshopView: View {
         isThinking = true
         failed = false
 
-        let summary = IdeaSummary(idea)
+        // The whole thought, not the ranking excerpt. Developing an idea needs the detail
+        // further down; connection-finding never does, which is why the default is small.
+        let summary = IdeaSummary(idea, excerptLimit: 1500)
         // Closure rather than `map(IdeaSummary.init)`: the initialiser takes an excerpt
         // limit with a default, and a bare function reference resolves to the full
         // two-argument form, where defaults do not apply.
@@ -284,6 +290,9 @@ struct WorkshopView: View {
         step.kind = .task
         step.isEnriched = true
         step.category = idea.category
+        // Land at the end of the roadmap. Without this every step added in a session shares
+        // rank zero and the order collapses back to whatever creation date happens to say.
+        step.stepOrder = existingStepCount
         context.insert(step)
 
         let link = IdeaLink(

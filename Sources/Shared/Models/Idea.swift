@@ -59,6 +59,9 @@ final class Idea {
     /// doing, and only you know which is which.
     var isGoal: Bool = false
 
+    /// Where this sits among a goal's steps. Only meaningful for roadmap steps.
+    var stepOrder: Int = 0
+
     // MARK: Resurfacing state
 
     /// Set when the user explicitly snoozes an idea to a date.
@@ -154,6 +157,24 @@ extension Idea {
     var allLinks: [IdeaLink] {
         (outgoingLinks ?? []) + (incomingLinks ?? [])
     }
+
+    /// A to-do that exists as a step towards something else.
+    ///
+    /// These are created by the workshop and by adding a step to a roadmap, and they belong
+    /// **only** on that roadmap. Left in the Ideas list they read as ideas you had, which is
+    /// exactly wrong: "Price three suppliers" is not a thought worth keeping, it is a thing
+    /// to do on the way to one — and a list of twenty of them buries the ideas underneath.
+    ///
+    /// Derived rather than stored, so detaching a step from its roadmap quietly turns it
+    /// back into an ordinary to-do instead of leaving it invisible forever.
+    var isRoadmapStep: Bool {
+        guard kind == .task else { return false }
+        return (outgoingLinks ?? []).contains { $0.isActive && $0.kind == .prerequisiteFor }
+    }
+
+    /// Position on its roadmap. Ties break on creation order, which is the order they were
+    /// added and usually the order they were meant.
+    var stepRank: Int { stepOrder }
 
     func touch() {
         updatedAt = .now

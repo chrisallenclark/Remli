@@ -369,6 +369,12 @@ extension FoundationModelsIntelligence {
         suggest must be small enough to start this week and specific enough that they could \
         not have written it about any other idea.
 
+        IMPORTANT: some ideas are a few words long, or named with a joke or a pun. If you \
+        cannot tell what the thing actually is or who it is for, do not guess and do not \
+        invent a business around the name. Ask. A question like "what does this actually \
+        involve day to day?" is far more useful than five confident steps for the wrong \
+        idea. Suggest no steps at all rather than steps built on a guess.
+
         Never suggest research, brainstorming, or "define your goals". Never pad the list — \
         two real steps beat five vague ones. If their other ideas are relevant, refer to \
         them by name.
@@ -380,6 +386,15 @@ extension FoundationModelsIntelligence {
             \(idea.title)
             \(idea.excerpt)
             """
+
+        // Everything cheap that disambiguates a short or oddly-named idea. Without this the
+        // model is reading a pun with no context and filling the gap with invention.
+        if let space = idea.spaceName {
+            prompt += "\n\nFiled under: \(space)"
+        }
+        if !idea.tags.isEmpty {
+            prompt += "\nTagged: \(idea.tags.joined(separator: ", "))"
+        }
 
         if !related.isEmpty {
             // Their own material. This is the difference between a generic plan and one

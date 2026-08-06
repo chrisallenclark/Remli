@@ -40,17 +40,41 @@ struct IdeaSummary: Sendable, Identifiable, Equatable {
     var title: String
     var excerpt: String
 
-    init(id: UUID, title: String, excerpt: String) {
+    /// The Space it lives in, when it has one. Cheap context that disambiguates a lot: a
+    /// short idea named with a pun is unreadable on its own and obvious once you know it
+    /// was filed under Business.
+    var spaceName: String?
+
+    /// The tags enrichment gave it — more of the same, for the same reason.
+    var tags: [String]
+
+    init(
+        id: UUID,
+        title: String,
+        excerpt: String,
+        spaceName: String? = nil,
+        tags: [String] = []
+    ) {
         self.id = id
         self.title = title
         self.excerpt = excerpt
+        self.spaceName = spaceName
+        self.tags = tags
     }
 
+    /// `excerptLimit` defaults to enough for ranking, not enough for thinking.
+    ///
+    /// 220 characters is right for connection-finding, where the job is deciding whether
+    /// two things are about the same subject and the opening sentence settles it. It is
+    /// badly wrong for developing an idea, where the details further down are exactly what
+    /// the model needs — pass a much larger limit there.
     init(_ idea: Idea, excerptLimit: Int = 220) {
         self.id = idea.id
         self.title = idea.displayTitle
         let body = idea.text.trimmingCharacters(in: .whitespacesAndNewlines)
         self.excerpt = body.count <= excerptLimit ? body : String(body.prefix(excerptLimit)) + "…"
+        self.spaceName = idea.category?.displayPath
+        self.tags = idea.tags
     }
 }
 

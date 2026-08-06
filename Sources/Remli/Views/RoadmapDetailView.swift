@@ -23,7 +23,12 @@ struct RoadmapDetailView: View {
         goal.category.flatMap { Color(hex: $0.colorHex) } ?? Theme.Palette.ember
     }
 
-    /// Ideas that must happen before the goal, in the order they were added.
+    /// The steps, in the order you put them.
+    ///
+    /// Sorted on an explicit rank rather than creation date so the sequence can be changed
+    /// after the fact — the order you *thought* of the steps is rarely the order you should
+    /// do them in. Creation date breaks ties, which keeps older roadmaps stable: every step
+    /// added before ranking existed has rank 0 and therefore keeps its original order.
     private var steps: [Idea] {
         var result: [Idea] = []
         for link in goal.incomingLinks ?? [] {
@@ -34,7 +39,28 @@ struct RoadmapDetailView: View {
             else { continue }
             result.append(source)
         }
-        return result.sorted { $0.createdAt < $1.createdAt }
+        return result.sorted { lhs, rhs in
+            if lhs.stepOrder == rhs.stepOrder { return lhs.createdAt < rhs.createdAt }
+            return lhs.stepOrder < rhs.stepOrder
+        }
+    }
+
+    /// Swaps a step with its neighbour and rewrites every rank, so the list can never end
+    /// up with duplicate or sparse positions after a few moves.
+    private func move(_ step: Idea, by offset: Int) {
+        var ordered = steps
+        guard
+            let from = ordered.firstIndex(where: { $0.id == step.id })
+        else { return }
+
+        let to = from + offset
+        guard ordered.indices.contains(to) else { return }
+
+        ordered.swapAt(from, to)
+        for (index, item) in ordered.enumerated() {
+            item.stepOrder = index
+        }
+        goal.touch()
     }
 
     private var doneCount: Int {
@@ -84,7 +110,7 @@ struct RoadmapDetailView: View {
             }
         }
         .sheet(isPresented: $isAddingStep) {
-            StepPicker(goal: goal, candidates: candidates)
+            StepPicker(goal: goal, candidates: candidates, existingStepCount: steps.count)
         }
     }
 
@@ -162,6 +188,40 @@ struct RoadmapDetailView: View {
                         StepRow(step: step, number: index + 1, accent: accent)
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        Button {
+                            step.status = step.status == .done ? .active : .done
+                            step.touch()
+                        } label: {
+                            Label(
+                                step.status == .done ? "Not done yet" : "Mark done",
+                                systemImage: step.status == .done ? "arrow.uturn.backward" : "checkmark"
+                            )
+                        }
+
+                        if index > 0 {
+                            Button {
+                                move(step, by: -1)
+                            } label: {
+                                Label("Move up", systemImage: "arrow.up")
+                            }
+                        }
+
+                        if index < steps.count - 1 {
+                            Button {
+                                move(step, by: 1)
+                            } label: {
+                                Label("Move down", systemImage: "arrow.down")
+                            }
+                        }
+
+                        Button(role: .destructive) {
+                            context.delete(step)
+                            goal.touch()
+                        } label: {
+                            Label("Remove step", systemImage: "trash")
+                        }
+                    }
                 }
             }
 
@@ -298,6 +358,7 @@ private struct StepPicker: View {
     /// Marked `origin: .user` and already accepted — a connection you drew yourself is not
     /// a suggestion and must never appear in the review queue asking for your approval.
     private func add(_ step: Idea) {
+        step.stepOrder = existingStepCount
         let link = IdeaLink(
             source: step,
             target: goal,
