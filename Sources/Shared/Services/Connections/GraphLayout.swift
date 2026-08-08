@@ -53,6 +53,16 @@ enum GraphLayout {
 
         var points = ids.map { positions[$0] ?? .zero }
 
+        // Mass. Anchoring ideas resist being shoved around; stray thoughts get pushed
+        // wherever the forces send them.
+        //
+        // Without this every node is equally movable, so the simulation settles into an
+        // even scatter and the map is a field of dots. Making the heavy ones stubborn is
+        // what produces hubs with satellites gathered around them — the shape is emergent
+        // from the same forces, not staged at draw time, so it is already there before you
+        // touch anything.
+        let mass: [CGFloat] = graph.nodes.map { 1 + 2 * CGFloat(graph.anchor($0)) }
+
         for _ in 0..<iterations {
             var displacement = [CGPoint](repeating: .zero, count: points.count)
 
@@ -118,7 +128,7 @@ enum GraphLayout {
                 let magnitude = max(hypot(move.x, move.y), 0.01)
                 // Temperature caps how far anything can travel in one step, which is what
                 // stops the early iterations from flinging nodes off the canvas.
-                let limited = min(magnitude, temperature)
+                let limited = min(magnitude, temperature) / mass[index]
                 points[index].x += move.x / magnitude * limited
                 points[index].y += move.y / magnitude * limited
             }

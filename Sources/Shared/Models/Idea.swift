@@ -40,8 +40,20 @@ final class Idea {
 
     var tags: [String] = []
 
-    /// 0–1, written during enrichment. Feeds the resurfacing score.
+    /// 0–1, written during enrichment. The *model's* guess, never the last word.
     var importanceScore: Double = 0
+
+    /// Your correction to that guess, when you have made one.
+    ///
+    /// Kept as a second field rather than overwriting `importanceScore`, for two reasons.
+    /// Enrichment can keep running and re-guessing without ever silently undoing your
+    /// judgement — which it would, since a re-enriched idea is a completely normal event.
+    /// And the guess stays available next to your answer, which is the only way to ever
+    /// find out whether the model is any good at this.
+    ///
+    /// Optional rather than a sentinel: `nil` means *you have not weighed in*, which is a
+    /// different statement from *you said zero*.
+    var importanceOverride: Double?
 
     /// Rough effort in minutes. Used to match an idea to a gap in the calendar — there is
     /// no point suggesting a two-day project for a twenty-minute window.
@@ -160,6 +172,34 @@ extension Idea {
 
         if firstLine.isEmpty { return "Untitled" }
         return firstLine.count <= 60 ? firstLine : String(firstLine.prefix(60)) + "…"
+    }
+
+    // MARK: Importance
+
+    /// What importance actually is: yours if you said, the model's otherwise.
+    ///
+    /// **Everything that ranks ideas reads this, not `importanceScore`** — resurfacing for
+    /// what comes back at you, the map for how big a node sits. An override that changed
+    /// nothing visible would be a placebo, and the fastest way to teach someone that their
+    /// input does not matter.
+    var importance: Double {
+        importanceOverride ?? importanceScore
+    }
+
+    /// Whether you have weighed in.
+    var importanceIsUserSet: Bool { importanceOverride != nil }
+
+    /// The effective level, as a person would say it.
+    var importanceLevel: ImportanceLevel { .nearest(to: importance) }
+
+    /// What enrichment landed on, kept reachable after you disagree so the two can be
+    /// compared. Meaningless until the idea has actually been enriched.
+    var importanceGuessLevel: ImportanceLevel { .nearest(to: importanceScore) }
+
+    /// Sets your level, or clears back to the model's guess when passed `nil`.
+    func setImportance(_ level: ImportanceLevel?) {
+        importanceOverride = level?.score
+        touch()
     }
 
     /// Every link touching this idea, in either direction.

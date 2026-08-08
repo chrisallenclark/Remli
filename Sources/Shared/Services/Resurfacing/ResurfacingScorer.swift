@@ -155,7 +155,10 @@ enum ResurfacingScorer {
 extension ResurfacingCandidate {
     init(_ idea: Idea) {
         self.id = idea.id
-        self.importance = idea.importanceScore
+        // Your figure, not the model's, wherever you have given one. This is where an
+        // importance override earns its keep: marking something Major is what makes it
+        // start coming back, and marking it Passing is what makes it stop.
+        self.importance = idea.importance
         self.createdAt = idea.createdAt
         self.lastSurfacedAt = idea.lastSurfacedAt
         self.surfaceCount = idea.surfaceCount

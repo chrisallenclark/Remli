@@ -10,8 +10,15 @@ struct GraphNode: Identifiable, Equatable, Sendable {
     let title: String
     let colorHex: String?
     let status: IdeaStatus
-    /// 0–1. Drives node size, so what matters reads as bigger.
+    /// 0–1. The person's own figure where they have given one, the model's otherwise.
     let importance: Double
+    /// When the idea was last touched. Drives how brightly the node burns, which is how
+    /// neglect becomes something you can see rather than something you have to remember.
+    let updatedAt: Date
+    /// How many active links touch it, in either direction.
+    let connections: Int
+    /// Whether it has been declared something you are actually building.
+    let isGoal: Bool
 }
 
 struct GraphEdge: Identifiable, Equatable, Sendable {
@@ -28,10 +35,41 @@ struct IdeaGraph: Equatable, Sendable {
     var nodes: [GraphNode] = []
     var edges: [GraphEdge] = []
 
+    /// The most connections any single idea has, and never less than 1.
+    ///
+    /// Node size is measured against this rather than an absolute ceiling, so a library of
+    /// nine ideas still has a proper biggest node instead of nine identical small ones, and
+    /// the picture rescales as the library grows rather than slowly filling up.
+    var maxConnections: Int = 1
+
     var isEmpty: Bool { nodes.isEmpty }
 
     func node(_ id: UUID) -> GraphNode? {
         nodes.first { $0.id == id }
+    }
+
+    // MARK: - Weighting
+
+    /// How much an idea anchors: 0 for a stray thought, 1 for the thing everything hangs off.
+    ///
+    /// Three inputs, because any one of them alone is wrong. Connections alone make a
+    /// well-connected throwaway the centre of the map. Importance alone ignores that your
+    /// thinking keeps circling back to something. And a goal you have explicitly declared
+    /// should read as substantial from the day you declare it, before anything links to it
+    /// at all — that last term is what stops a brand-new commitment looking like dust.
+    func anchor(_ node: GraphNode) -> Double {
+        let reach = Double(node.connections) / Double(max(maxConnections, 1))
+        let weighted = 0.45 * reach
+            + 0.40 * min(max(node.importance, 0), 1)
+            + 0.15 * (node.isGoal ? 1 : 0)
+        return min(max(weighted, 0), 1)
+    }
+
+    /// How strongly two ideas are tied, in either direction. Zero when they are not.
+    func strength(between a: UUID, and b: UUID) -> Double {
+        edges.first { edge in
+            (edge.source == a && edge.target == b) || (edge.source == b && edge.target == a)
+        }?.strength ?? 0
     }
 
     // MARK: - Dependency ordering
@@ -142,18 +180,12 @@ extension IdeaGraph {
         let included = ideas.filter { $0.kind == .idea }
         let includedIDs = Set(included.map(\.id))
 
-        self.nodes = included.map { idea in
-            GraphNode(
-                id: idea.id,
-                title: idea.displayTitle,
-                colorHex: idea.category?.colorHex,
-                status: idea.status,
-                importance: idea.importanceScore
-            )
-        }
-
+        // Edges are gathered first so that nodes can be built already knowing how connected
+        // each one is. Counting afterwards would mean either a second pass or a mutable
+        // node, and the count is needed before the first thing is drawn.
         var seenEdges = Set<String>()
         var collected: [GraphEdge] = []
+        var degree: [UUID: Int] = [:]
 
         for idea in included {
             for link in idea.outgoingLinks ?? [] {
@@ -178,9 +210,28 @@ extension IdeaGraph {
                         rationale: link.rationale
                     )
                 )
+
+                degree[sourceID, default: 0] += 1
+                degree[targetID, default: 0] += 1
             }
         }
 
         self.edges = collected
+        self.maxConnections = max(degree.values.max() ?? 0, 1)
+
+        self.nodes = included.map { idea in
+            GraphNode(
+                id: idea.id,
+                title: idea.displayTitle,
+                colorHex: idea.category?.colorHex,
+                status: idea.status,
+                // The person's correction where they have made one. This is the line that
+                // makes disagreeing with the importance score change what you see.
+                importance: idea.importance,
+                updatedAt: idea.updatedAt,
+                connections: degree[idea.id] ?? 0,
+                isGoal: idea.isGoal
+            )
+        }
     }
 }

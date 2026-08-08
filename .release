@@ -1,4 +1,6 @@
 Touch this file and push to trigger a signed TestFlight build.
 See the `push` trigger in .github/workflows/release.yml.
 
-build 13 — workshop actually uses the on-device model; refresh questions; learns dismissals
+build 14 — map redesigned: nodes sized by what they anchor, tap to gather
+           a hub's ideas into orbit sized by relatedness; importance score
+           finally visible on an idea, and correctable

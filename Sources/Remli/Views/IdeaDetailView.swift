@@ -65,6 +65,13 @@ struct IdeaDetailView: View {
                     .buttonStyle(.plain)
                 }
 
+                // Sits above the connections because it is the one thing on this screen
+                // you can correct that changes the app's behaviour elsewhere — what gets
+                // resurfaced, and how large this idea sits on the map.
+                if idea.kind == .idea {
+                    ImportanceControl(idea: idea)
+                }
+
                 ConnectionsSection(idea: idea)
 
                 RoadmapPreview(idea: idea)
