@@ -181,13 +181,23 @@ struct MapView: View {
                 viewSize = size
                 fitToContent()
             }
-            // One composed gesture rather than `.gesture` plus `.simultaneousGesture`.
+            // One composed gesture, and the tap is *inside* it rather than a separate
+            // `.onTapGesture`.
             //
-            // With two separate recognisers the drag would claim the interaction and
-            // cancel the magnify, and a cancelled gesture never calls `onEnded` — so the
-            // committed zoom was never written and the map sprang back to its previous
-            // scale the instant you lifted your fingers. `SimultaneousGesture` gives both
-            // recognisers the same events and one end callback that always fires.
+            // Two separate recognisers were the original bug: the drag would claim the
+            // interaction and cancel the magnify, and a cancelled gesture never calls
+            // `onEnded`, so the committed zoom was never written and the map sprang back
+            // the instant you lifted your fingers. `SimultaneousGesture` fixed that.
+            //
+            // But it left a second bug that hid for two builds. A `DragGesture` with
+            // `minimumDistance: 0` recognises the moment a finger lands, so it wins
+            // arbitration against `TapGesture` every single time — and `.onTapGesture`
+            // simply never fired. The nodes were never tappable, on any build.
+            //
+            // Raising the minimum distance would fix the arbitration and reintroduce the
+            // guesswork. Instead the tap is derived from the drag itself: a tap is a drag
+            // that went nowhere. No arbitration is involved, so there is nothing left to
+            // be wrong about.
             .gesture(
                 SimultaneousGesture(DragGesture(minimumDistance: 0), MagnifyGesture())
                     .onChanged { value in
@@ -198,7 +208,10 @@ struct MapView: View {
                             zoom = magnify.magnification
                         }
                     }
-                    .onEnded { _ in
+                    .onEnded { value in
+                        let travelled = value.first.map { hypot($0.translation.width, $0.translation.height) } ?? 0
+                        let pinched = abs((value.second?.magnification ?? 1) - 1)
+
                         committedPan.width += pan.width
                         committedPan.height += pan.height
                         pan = .zero
@@ -206,22 +219,26 @@ struct MapView: View {
                         committedZoom = min(max(committedZoom * zoom, Self.minZoom), Self.maxZoom)
                         zoom = 1
 
-                        hasAdjusted = true
+                        // Only a real pan or pinch counts as adjusting the view. Otherwise
+                        // every tap would raise the "fit everything" button.
+                        if travelled >= Self.tapSlop || pinched >= 0.05 {
+                            hasAdjusted = true
+                            return
+                        }
+
+                        if let location = value.first?.startLocation {
+                            select(at: location, in: proxy.size)
+                        }
                     }
             )
-            .onTapGesture { location in
-                select(at: location, in: proxy.size)
-            }
             .overlay(alignment: .bottom) {
-                if let selectedNode {
-                    SelectionCard(node: selectedNode, graph: graph, now: renderedAt)
-                        .padding(Theme.Space.md)
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                } else if showsColdOnly {
-                    ColdCard(count: coldCount)
-                        .padding(Theme.Space.md)
-                        .transition(.opacity)
-                }
+                // Always present, never an empty gap. At rest it names the biggest idea and
+                // says what size and fading mean, which is the only place those rules are
+                // ever explained — a map you have to be told about in a release note is a
+                // map nobody reads.
+                mapCard
+                    .padding(Theme.Space.md)
+                    .animation(Theme.Motion.standard, value: selection)
             }
             .overlay(alignment: .topTrailing) {
                 controls
@@ -248,6 +265,32 @@ struct MapView: View {
         }
     }
 
+    /// The card under the map. One of three states, always one of them.
+    @ViewBuilder
+    private var mapCard: some View {
+        if showsColdOnly {
+            ColdCard(names: coldNames, total: coldCount)
+        } else if let selectedNode {
+            SelectionCard(node: selectedNode, graph: graph, now: renderedAt)
+        } else {
+            RestingCard(biggest: biggest, coldCount: coldCount)
+        }
+    }
+
+    /// Whatever is anchoring hardest right now — the honest answer to "what am I building
+    /// toward", available without tapping anything.
+    private var biggest: GraphNode? {
+        graph.nodes.max { graph.anchor($0) < graph.anchor($1) }
+    }
+
+    private var coldNames: [String] {
+        graph.nodes
+            .filter { MapMetrics.isCold($0, now: renderedAt) }
+            .sorted { $0.updatedAt < $1.updatedAt }
+            .prefix(3)
+            .map(\.title)
+    }
+
     private var controls: some View {
         VStack(spacing: Theme.Space.xs) {
             if isLayingOut {
@@ -259,15 +302,17 @@ struct MapView: View {
             // whatever is still burning is what you abandoned. Nothing else in the app can
             // answer that, because a list sorted by date tells you what is *recent*, never
             // what is missing.
-            if coldCount > 0 {
-                roundButton(
-                    symbol: "moon.stars",
-                    isOn: showsColdOnly,
-                    label: "Show what has gone cold"
-                ) {
-                    release()
-                    withAnimation(Theme.Motion.standard) { showsColdOnly.toggle() }
-                }
+            //
+            // Shown even when nothing is cold. Hiding it meant the one control that makes
+            // this screen useful appeared and vanished depending on state, so it could not
+            // be learned — and a quiet "nothing has slipped" is a real answer worth having.
+            roundButton(
+                symbol: "moon.stars",
+                isOn: showsColdOnly,
+                label: "Show what has gone cold"
+            ) {
+                release()
+                withAnimation(Theme.Motion.standard) { showsColdOnly.toggle() }
             }
 
             if hasAdjusted {
@@ -350,6 +395,11 @@ struct MapView: View {
     /// needed, so zooming out simply stopped before the ideas came into view.
     static let minZoom: CGFloat = 0.12
     static let maxZoom: CGFloat = 4
+
+    /// How far a finger may travel and still count as a tap rather than a pan. Generous,
+    /// because a thumb on a phone always drifts a little and a tap that silently becomes a
+    /// one-pixel pan reads as the map ignoring you.
+    static let tapSlop: CGFloat = 12
 
     /// Above this many nodes, labels are drawn only when zoomed in. Below it, every idea is
     /// named all the time — a handful of anonymous dots is not a map of anything.
@@ -1080,19 +1130,71 @@ private struct SelectionCard: View {
     }
 }
 
-private struct ColdCard: View {
-    let count: Int
+/// What the card says when nothing is selected.
+///
+/// This is the only place the map explains itself. Without it the screen is a beautiful
+/// field of circles whose sizes and brightnesses mean something you would have to be told
+/// — and nobody reads the thing that tells you.
+private struct RestingCard: View {
+    let biggest: GraphNode?
+    let coldCount: Int
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-            Text("\(count) idea\(count == 1 ? "" : "s") gone cold")
+            Text("Tap an idea")
                 .font(Theme.Typography.ideaBody)
                 .foregroundStyle(Theme.Palette.ink)
 
-            Text("Untouched for a month or more. Anything large here\nis something that mattered and then stopped.")
-                .font(Theme.Typography.meta)
-                .foregroundStyle(Theme.Palette.inkMuted)
-                .lineSpacing(2)
+            if let biggest {
+                Text("Biggest right now: \(biggest.title). Size is how much an idea anchors — what you've said matters, plus how much hangs off it. Faint means you haven't touched it in a while.")
+                    .font(Theme.Typography.meta)
+                    .foregroundStyle(Theme.Palette.inkMuted)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("Size is how much an idea anchors. Faint means you haven't touched it in a while.")
+                    .font(Theme.Typography.meta)
+                    .foregroundStyle(Theme.Palette.inkMuted)
+            }
+
+            if coldCount > 0 {
+                Text("\(coldCount) gone cold — tap the moon to see which")
+                    .font(.system(.caption2, design: .monospaced))
+                    .foregroundStyle(Theme.Palette.ember.opacity(0.85))
+                    .padding(.top, 2)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardBackground()
+    }
+}
+
+private struct ColdCard: View {
+    let names: [String]
+    let total: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.xxs) {
+            Text(total == 0 ? "Nothing has gone cold" : "\(total) idea\(total == 1 ? "" : "s") gone cold")
+                .font(Theme.Typography.ideaBody)
+                .foregroundStyle(Theme.Palette.ink)
+
+            if names.isEmpty {
+                Text("Everything here has been touched in the last month.")
+                    .font(Theme.Typography.meta)
+                    .foregroundStyle(Theme.Palette.inkMuted)
+            } else {
+                // Longest-neglected first, because that is the one worth naming.
+                Text(names.joined(separator: " · "))
+                    .font(Theme.Typography.meta)
+                    .foregroundStyle(Theme.Palette.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text("Untouched for a month or more. Anything large here is\nsomething that mattered to you and then stopped.")
+                    .font(Theme.Typography.meta)
+                    .foregroundStyle(Theme.Palette.inkMuted)
+                    .lineSpacing(2)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardBackground()

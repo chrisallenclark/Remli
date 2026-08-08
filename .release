@@ -1,6 +1,5 @@
 Touch this file and push to trigger a signed TestFlight build.
 See the `push` trigger in .github/workflows/release.yml.
 
-build 14 — map redesigned: nodes sized by what they anchor, tap to gather
-           a hub's ideas into orbit sized by relatedness; importance score
-           finally visible on an idea, and correctable
+build 15 — map nodes are actually tappable; the card under the map is
+           always there and explains itself; cold-ideas button always shown
