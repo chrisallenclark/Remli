@@ -61,7 +61,7 @@ jobs:
             -Premli.versionCode=${{ github.run_number }} \
             :app:assembleDebug \
             :app:lintDebug \
-            :app:recordRoborazziDebug \
+            :app:verifyRoborazziDebug \
             2>&1 | tee "$RUNNER_TEMP/build.log"
 
       - name: Rename APK
@@ -79,7 +79,9 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: screenshots-jvm
-          path: android/app/build/outputs/roborazzi/
+          path: |
+            android/app/build/outputs/roborazzi/
+            android/app/src/test/screenshots/
           if-no-files-found: ignore
           retention-days: 14
 

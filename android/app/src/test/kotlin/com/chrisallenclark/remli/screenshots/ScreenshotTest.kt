@@ -21,6 +21,7 @@ import com.chrisallenclark.remli.ui.IdeaActions
 import com.chrisallenclark.remli.ui.IdeaDetailScreen
 import com.chrisallenclark.remli.ui.IdeasListScreen
 import com.chrisallenclark.remli.ui.SettingsSheet
+import com.github.takahirom.roborazzi.RoborazziOptions
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,9 +35,10 @@ import org.robolectric.annotation.GraphicsMode
  * ship with: 360dp (small and budget phones), 411dp (the common size), 480dp (the largest
  * phones), light and dark, and text at 200%.
  *
- * These are the regression net: recorded images are committed under
- * src/test/screenshots, and CI fails when a screen changes without the baseline being
- * updated. Fidelity against iOS is judged from the emulator screenshots instead, which
+ * These are the regression net: the images in src/test/screenshots are the approved
+ * baselines, and CI fails when a screen no longer matches them. To change a screen on
+ * purpose, run `./gradlew :app:recordRoborazziDebug` (or take the new images CI publishes
+ * on the android-ci-log branch), review them, and commit them with the change. Fidelity against iOS is judged from the emulator screenshots instead, which
  * include the real status bar and system fonts.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -60,7 +62,12 @@ class ScreenshotTest {
     private val capabilities = DeviceCapabilities.from(DeviceFacts(36, false, 8L shl 30, true))
 
     private fun shot(name: String, dark: Boolean, content: @Composable () -> Unit) {
-        captureRoboImage("build/outputs/roborazzi/$name.png") {
+        captureRoboImage(
+            "src/test/screenshots/$name.png",
+            // A sliver of tolerance for anti-aliasing noise between runner images; a real
+            // change to a screen moves far more than this.
+            roborazziOptions = RoborazziOptions(compareOptions = RoborazziOptions.CompareOptions(changeThreshold = 0.002f)),
+        ) {
             RemliTheme(dark) {
                 Box(Modifier.fillMaxSize().background(palette.canvas)) { content() }
             }
