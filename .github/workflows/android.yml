@@ -90,6 +90,7 @@ jobs:
           name: build-reports
           path: |
             android/app/build/reports/
+            android/app/build/test-results/
             ${{ runner.temp }}/build.log
           if-no-files-found: ignore
           retention-days: 14
@@ -194,10 +195,13 @@ jobs:
           out="$RUNNER_TEMP/android-ci-log"
           mkdir -p "$out/screenshots"
           find "$RUNNER_TEMP/artifacts" -name '*.png' -exec cp {} "$out/screenshots/" \;
+          # Test results, so a failure's full stack trace is readable over plain git.
+          mkdir -p "$out/test-results"
+          find "$RUNNER_TEMP/artifacts" -name 'TEST-*.xml' -exec cp {} "$out/test-results/" \;
           : > "$out/errors.txt"
           for f in $(find "$RUNNER_TEMP/artifacts" -name '*.log'); do
             echo "=== $(basename "$f")" >> "$out/errors.txt"
-            grep -aE "^e: |error:|FAILED|Exception|What went wrong|BUILD (SUCCESSFUL|FAILED)|tests completed" "$f" | head -150 >> "$out/errors.txt"
+            grep -aE "^e: |error:|FAILED|Exception|Caused by|What went wrong|BUILD (SUCCESSFUL|FAILED)|tests completed" "$f" | head -300 >> "$out/errors.txt"
             tail -60 "$f" > "$out/tail-$(basename "$f" .log).txt"
           done
           {

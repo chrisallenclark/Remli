@@ -58,7 +58,17 @@ android {
         unitTests {
             // Robolectric needs resources to render screenshot tests.
             isIncludeAndroidResources = true
-            all { it.systemProperty("robolectric.pixelCopyRenderMode", "hardware") }
+            all {
+                it.systemProperty("robolectric.pixelCopyRenderMode", "hardware")
+                // Full stack traces in the build log. CI output is the only window into a
+                // failure from the cloud session, so a one-line summary is not enough.
+                it.testLogging {
+                    events("failed")
+                    exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+                    showCauses = true
+                    showStackTraces = true
+                }
+            }
         }
     }
 
