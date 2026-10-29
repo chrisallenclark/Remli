@@ -7,9 +7,10 @@ plugins {
 android {
     namespace = "com.chrisallenclark.remli"
 
-    // Google Play requires new apps and updates to target API 36 (Android 16) from
-    // 31 August 2026. compileSdk follows it.
-    compileSdk = 36
+    // compileSdk only decides which APIs the code can *see*. Current AndroidX releases
+    // require 37, and raising it changes nothing about which phones can install the app
+    // (minSdk) or which platform behaviours it opts into (targetSdk).
+    compileSdk = 37
 
     defaultConfig {
         // Same identifier as the iOS bundle. Permanent once the app exists on Google Play.
@@ -18,6 +19,8 @@ android {
         // Android 8.0. Android 10–16 is where the experience is polished and tested on every
         // change; 8 and 9 are supported with graceful fallbacks — see DeviceCapabilities.
         minSdk = 26
+        // Google Play requires new apps and updates to target API 36 (Android 16) from
+        // 31 August 2026. Moved to 37 deliberately, once its behaviour changes are tested.
         targetSdk = 36
 
         // CI passes its run number so every build that could reach a phone is newer than

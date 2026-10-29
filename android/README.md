@@ -8,7 +8,7 @@ this one.
 |---|---|
 | Package | `com.chrisallenclark.remli` (same as the iOS bundle ID) |
 | Supports | Android 8.0+ (API 26). Android 10–16 is the polished, fully tested range |
-| Targets | API 36 (Android 16), as Google Play requires from 31 Aug 2026 |
+| Targets | API 36 (Android 16), as Google Play requires from 31 Aug 2026. Compiles against API 37, which current AndroidX libraries require |
 | Toolchain | AGP 9.4 · Kotlin 2.4.21 · Gradle 9.8.1 · Compose BOM 2026.09.00 · JDK 21 |
 
 ## Building

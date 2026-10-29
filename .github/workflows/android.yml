@@ -44,15 +44,15 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
 
       # Also validates that gradle-wrapper.jar is a genuine Gradle release.
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
 
       - name: Build, lint and test
         run: |
@@ -68,7 +68,7 @@ jobs:
         run: cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/Remli-debug-${{ github.run_number }}.apk"
 
       - name: Upload debug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Remli-debug-apk
           path: ${{ runner.temp }}/Remli-debug-${{ github.run_number }}.apk
@@ -76,7 +76,7 @@ jobs:
 
       - name: Upload screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: screenshots-jvm
           path: android/app/build/outputs/roborazzi/
@@ -85,7 +85,7 @@ jobs:
 
       - name: Upload reports and log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: build-reports
           path: |
@@ -120,14 +120,14 @@ jobs:
             profile: pixel_7_pro
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
 
       # Hardware acceleration for the emulator. Without it an x86 emulator is too slow to
       # boot inside the timeout.
@@ -159,7 +159,7 @@ jobs:
 
       - name: Upload emulator results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: emulator-api${{ matrix.api }}
           path: |
@@ -182,9 +182,9 @@ jobs:
       run:
         working-directory: .
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           path: ${{ runner.temp }}/artifacts
 
