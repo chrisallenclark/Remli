@@ -80,6 +80,9 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             2>&1 | tee "$RUNNER_TEMP/build.log" | tail -40
 
+      # The UI-test runner is sandboxed inside the simulator and cannot write to the Mac's
+      # filesystem, so screenshots travel as test attachments and are exported from the
+      # result bundle afterwards.
       - name: Capture light and dark
         working-directory: android/tools/ios-reference
         run: |
@@ -91,9 +94,29 @@ jobs:
               -project ../../../RemliReference.xcodeproj -scheme RemliReference \
               -destination "id=${{ steps.sim.outputs.udid }}" \
               -derivedDataPath "$RUNNER_TEMP/dd" \
+              -resultBundlePath "$RUNNER_TEMP/$appearance.xcresult" \
               CODE_SIGNING_ALLOWED=NO \
-              TEST_RUNNER_REFERENCE_DIR="$out" TEST_RUNNER_APPEARANCE="$appearance" \
+              TEST_RUNNER_APPEARANCE="$appearance" \
               2>&1 | tee -a "$RUNNER_TEMP/test.log" | grep -E "Test Case|error|failed|passed" || true
+
+            raw="$RUNNER_TEMP/raw-$appearance"
+            mkdir -p "$raw"
+            xcrun xcresulttool export attachments --path "$RUNNER_TEMP/$appearance.xcresult" --output-path "$raw" || true
+            # The manifest maps exported files to the names the test gave them.
+            python3 - "$raw" "$out" "$appearance" <<'PY'
+          import json, os, shutil, sys
+          raw, out, appearance = sys.argv[1:4]
+          manifest = os.path.join(raw, "manifest.json")
+          if not os.path.exists(manifest):
+              sys.exit(0)
+          for test in json.load(open(manifest)):
+              for a in test.get("attachments", []):
+                  name = a.get("suggestedHumanReadableName", "")
+                  base = name.split("_0_")[0].rsplit(".", 1)[0]
+                  src = os.path.join(raw, a["exportedFileName"])
+                  if os.path.exists(src):
+                      shutil.copy(src, os.path.join(out, f"{appearance}_{base}.png"))
+          PY
           done
           ls -la "$out"
 
@@ -104,6 +127,7 @@ jobs:
           out="$RUNNER_TEMP/publish"
           mkdir -p "$out/screens"
           cp "$RUNNER_TEMP"/reference/*.png "$out/screens/" 2>/dev/null
+          for a in light dark; do cp "$RUNNER_TEMP/raw-$a/manifest.json" "$out/manifest-$a.json" 2>/dev/null; done
           grep -aE "error:|failed|Test Case|\*\* (BUILD|TEST)" "$RUNNER_TEMP/build.log" "$RUNNER_TEMP/test.log" 2>/dev/null | head -200 > "$out/log.txt"
           tail -80 "$RUNNER_TEMP/build.log" > "$out/build-tail.txt" 2>/dev/null
           echo "$GITHUB_SHA" > "$out/sha.txt"
