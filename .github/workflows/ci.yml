@@ -6,7 +6,12 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    # `remli-android` is excluded: it carries the iOS sources unchanged, so building them
+    # there proves nothing — and this workflow deletes every other `ci-*` tag when it
+    # publishes its own, so a run on the Android branch would erase the build signal the
+    # iOS branch depends on. The Android app has its own workflow (android.yml) and its own
+    # `android-ci-*` tags, which the cleanup below never matches.
+    branches: ["**", "!remli-android"]
   pull_request:
   workflow_dispatch:
 
@@ -20,6 +25,9 @@ permissions:
 jobs:
   build:
     name: Build (iOS Simulator)
+    # Same reason as the branch filter above, for what that filter does not cover: pull
+    # requests opened from the Android branch, and a manual run started on it.
+    if: github.head_ref != 'remli-android' && github.ref_name != 'remli-android'
     runs-on: macos-latest
     timeout-minutes: 30
 

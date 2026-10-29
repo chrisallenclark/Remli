@@ -1,0 +1,4 @@
+<resources>
+    <!-- Canvas, dark appearance. -->
+    <color name="canvas">#09080B</color>
+</resources>

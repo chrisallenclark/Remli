@@ -1,0 +1,95 @@
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.roborazzi)
+}
+
+android {
+    namespace = "com.chrisallenclark.remli"
+
+    // Google Play requires new apps and updates to target API 36 (Android 16) from
+    // 31 August 2026. compileSdk follows it.
+    compileSdk = 36
+
+    defaultConfig {
+        // Same identifier as the iOS bundle. Permanent once the app exists on Google Play.
+        applicationId = "com.chrisallenclark.remli"
+
+        // Android 8.0. Android 10–16 is where the experience is polished and tested on every
+        // change; 8 and 9 are supported with graceful fallbacks — see DeviceCapabilities.
+        minSdk = 26
+        targetSdk = 36
+
+        // CI passes its run number so every build that could reach a phone is newer than
+        // the last. Local builds stay at 1.
+        versionCode = (project.findProperty("remli.versionCode") as String?)?.toIntOrNull() ?: 1
+        // Kept in step with MARKETING_VERSION in ../project.yml.
+        versionName = "0.1.0"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            // No signingConfig here on purpose. Release signing is wired up in the Play
+            // release workflow from repository secrets; no key ever lives in this repo.
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    testOptions {
+        unitTests {
+            // Robolectric needs resources to render screenshot tests.
+            isIncludeAndroidResources = true
+            all { it.systemProperty("robolectric.pixelCopyRenderMode", "hardware") }
+        }
+    }
+
+    lint {
+        // Lint runs in CI on every build. Errors fail it; warnings are reported.
+        abortOnError = true
+        checkReleaseBuilds = false
+    }
+}
+
+dependencies {
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui)
+    implementation(libs.compose.ui.graphics)
+    implementation(libs.compose.foundation)
+    implementation(libs.compose.ui.tooling.preview)
+    debugImplementation(libs.compose.ui.tooling)
+    debugImplementation(libs.compose.ui.test.manifest)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit.rule)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
+
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
+}

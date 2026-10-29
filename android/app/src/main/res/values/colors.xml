@@ -1,0 +1,6 @@
+<resources>
+    <!-- Canvas, from Resources/Assets.xcassets/Canvas.colorset (light). Used only for the
+         window background before Compose draws, so launch never flashes white or black. -->
+    <color name="canvas">#F6F4F0</color>
+    <color name="icon_background">#D6CBBF</color>
+</resources>

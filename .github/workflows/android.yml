@@ -1,0 +1,235 @@
+name: Android
+
+# Builds and tests the Android app in android/.
+#
+# Development happens in a cloud session that cannot download the Android SDK, so — exactly
+# as ci.yml is for iOS — this workflow IS the compiler, and its published results are the
+# feedback loop. It is scoped to Android paths and to the Android branch, and it publishes
+# under its own names (`android-ci-*` tags, the `android-ci-log` branch) so it can never
+# touch the `ci-*` / `rel-*` signals the iOS workflows depend on.
+#
+# Testing is deliberately layered, cheapest first:
+#   1. JVM unit tests            — every push, seconds
+#   2. JVM screenshot tests      — every push, several screen sizes / dark / 200% text
+#   3. Emulator matrix           — every push, three representative Android versions
+# The matrix grows as features land (see android/TESTING.md); it starts small on purpose.
+
+on:
+  push:
+    branches: ["remli-android"]
+    paths:
+      - "android/**"
+      - ".github/workflows/android.yml"
+  pull_request:
+    paths:
+      - "android/**"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: android
+
+jobs:
+  build:
+    name: Build, lint, unit & screenshot tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # Also validates that gradle-wrapper.jar is a genuine Gradle release.
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build, lint and test
+        run: |
+          set -o pipefail
+          ./gradlew --stacktrace \
+            -Premli.versionCode=${{ github.run_number }} \
+            :app:assembleDebug \
+            :app:lintDebug \
+            :app:recordRoborazziDebug \
+            2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      - name: Rename APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/Remli-debug-${{ github.run_number }}.apk"
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Remli-debug-apk
+          path: ${{ runner.temp }}/Remli-debug-${{ github.run_number }}.apk
+          retention-days: 14
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-jvm
+          path: android/app/build/outputs/roborazzi/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload reports and log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-reports
+          path: |
+            android/app/build/reports/
+            ${{ runner.temp }}/build.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+  emulator:
+    name: Emulator — Android ${{ matrix.android }} (${{ matrix.size }})
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The floor: oldest supported version on a small, budget-sized screen.
+          - api: 26
+            android: "8.0"
+            size: small
+            profile: Nexus 5
+          # The polished floor, at a common mid-size.
+          - api: 29
+            android: "10"
+            size: standard
+            profile: pixel_4
+          # The target, on a large phone.
+          - api: 36
+            android: "16"
+            size: large
+            profile: pixel_7_pro
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Hardware acceleration for the emulator. Without it an x86 emulator is too slow to
+      # boot inside the timeout.
+      - name: Enable KVM
+        working-directory: .
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run instrumented tests and capture the launch screen
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: ${{ matrix.profile }}
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          working-directory: android
+          # Each line runs in its own `sh -c`, which has no pipefail — so the test log is
+          # redirected rather than piped through tee, or a failing test would pass the step.
+          script: |
+            ./gradlew --stacktrace -Premli.versionCode=${{ github.run_number }} :app:connectedDebugAndroidTest > "$RUNNER_TEMP/emulator-${{ matrix.api }}.log" 2>&1 || { tail -120 "$RUNNER_TEMP/emulator-${{ matrix.api }}.log"; exit 1; }
+            ./gradlew -Premli.versionCode=${{ github.run_number }} :app:installDebug
+            adb shell am start -W -n com.chrisallenclark.remli/.MainActivity
+            sleep 4
+            mkdir -p "$RUNNER_TEMP/shots" && adb exec-out screencap -p > "$RUNNER_TEMP/shots/emulator-api${{ matrix.api }}-${{ matrix.size }}.png"
+
+      - name: Upload emulator results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-api${{ matrix.api }}
+          path: |
+            ${{ runner.temp }}/shots/
+            ${{ runner.temp }}/emulator-${{ matrix.api }}.log
+            android/app/build/reports/androidTests/
+            android/app/build/outputs/androidTest-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # Publishes the outcome where a session with no GitHub Actions UI can read it: a tag whose
+  # name is the result, and an orphan branch holding the screenshots and the error lines.
+  # Mirrors the iOS workflow's mechanism under different names, so the two never collide.
+  publish:
+    name: Publish result
+    needs: [build, emulator]
+    if: always()
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/artifacts
+
+      - name: Assemble the log branch
+        run: |
+          set +e
+          out="$RUNNER_TEMP/android-ci-log"
+          mkdir -p "$out/screenshots"
+          find "$RUNNER_TEMP/artifacts" -name '*.png' -exec cp {} "$out/screenshots/" \;
+          : > "$out/errors.txt"
+          for f in $(find "$RUNNER_TEMP/artifacts" -name '*.log'); do
+            echo "=== $(basename "$f")" >> "$out/errors.txt"
+            grep -aE "^e: |error:|FAILED|Exception|What went wrong|BUILD (SUCCESSFUL|FAILED)|tests completed" "$f" | head -150 >> "$out/errors.txt"
+            tail -60 "$f" > "$out/tail-$(basename "$f" .log).txt"
+          done
+          {
+            echo "sha: $GITHUB_SHA"
+            echo "build: ${{ needs.build.result }}"
+            echo "emulator: ${{ needs.emulator.result }}"
+          } > "$out/summary.txt"
+          cd "$out"
+          git init -q
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Android CI results for $GITHUB_SHA"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/android-ci-log
+
+      - name: Publish result as a git tag
+        run: |
+          build="${{ needs.build.result }}"; emu="${{ needs.emulator.result }}"
+          if [ "$build" = cancelled ] || [ "$emu" = cancelled ]; then outcome=cancelled
+          elif [ "$build" = success ] && [ "$emu" = success ]; then outcome=pass
+          else outcome=fail; fi
+          tag="android-ci-${outcome}-${GITHUB_SHA}"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Only ever android-ci-* — never the iOS ci-* or rel-* tags.
+          git ls-remote --tags origin 'refs/tags/android-ci-*' \
+            | awk '{print $2}' | sed 's#refs/tags/##' \
+            | while read -r old; do
+                [ "$old" = "$tag" ] || git push --delete origin "$old" || true
+              done
+
+          git tag -f "$tag"
+          git push -f origin "refs/tags/$tag"

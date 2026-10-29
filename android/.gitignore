@@ -1,0 +1,13 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.kotlin/
+captures/
+# Signing material never enters the repository. Release signing reads it from CI secrets.
+*.jks
+*.keystore
+keystore.properties
+google-services.json
+play-service-account*.json

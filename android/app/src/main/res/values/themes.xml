@@ -1,0 +1,9 @@
+<resources>
+    <!-- A platform theme with no action bar: every pixel after launch is drawn by Compose.
+         The window background is the Canvas colour so the first frame matches the app. -->
+    <style name="Theme.Remli" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/canvas</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>
