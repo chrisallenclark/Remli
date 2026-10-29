@@ -1,0 +1,7 @@
+/Users/runner/work/_temp/build.log:** TEST BUILD SUCCEEDED **
+/Users/runner/work/_temp/test.log:Test Case '-[RemliReferenceUITests.ReferenceScreens testReferenceScreens]' started.
+/Users/runner/work/_temp/test.log:Test Case '-[RemliReferenceUITests.ReferenceScreens testReferenceScreens]' passed (110.248 seconds).
+/Users/runner/work/_temp/test.log:** TEST EXECUTE SUCCEEDED **
+/Users/runner/work/_temp/test.log:Test Case '-[RemliReferenceUITests.ReferenceScreens testReferenceScreens]' started.
+/Users/runner/work/_temp/test.log:Test Case '-[RemliReferenceUITests.ReferenceScreens testReferenceScreens]' passed (110.507 seconds).
+/Users/runner/work/_temp/test.log:** TEST EXECUTE SUCCEEDED **
