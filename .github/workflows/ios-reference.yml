@@ -40,7 +40,10 @@ jobs:
         working-directory: android/tools/ios-reference
         run: |
           brew install xcodegen
-          xcodegen generate --spec project.yml
+          # Generated at the repository root, not here: the included iOS spec sets build
+          # settings such as INFOPLIST_FILE as paths relative to the project, and XcodeGen
+          # rebases source paths from an include but not build settings.
+          xcodegen generate --spec project.yml --project ../../..
 
       # A standard-size iPhone (not Pro Max, Plus or Air): the width the Android "medium"
       # screenshots are taken at, near enough.
@@ -71,7 +74,7 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild build-for-testing \
-            -project RemliReference.xcodeproj -scheme RemliReference \
+            -project ../../../RemliReference.xcodeproj -scheme RemliReference \
             -destination "id=${{ steps.sim.outputs.udid }}" \
             -derivedDataPath "$RUNNER_TEMP/dd" \
             CODE_SIGNING_ALLOWED=NO \
@@ -85,7 +88,7 @@ jobs:
           for appearance in light dark; do
             xcrun simctl ui "${{ steps.sim.outputs.udid }}" appearance "$appearance"
             xcodebuild test-without-building \
-              -project RemliReference.xcodeproj -scheme RemliReference \
+              -project ../../../RemliReference.xcodeproj -scheme RemliReference \
               -destination "id=${{ steps.sim.outputs.udid }}" \
               -derivedDataPath "$RUNNER_TEMP/dd" \
               CODE_SIGNING_ALLOWED=NO \
