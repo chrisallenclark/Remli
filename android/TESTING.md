@@ -3,33 +3,31 @@
 Layered so the cheap checks run on everything and the expensive ones are added as there is
 something for them to catch.
 
-## Today (A0)
+## Today (A1)
 
 | Layer | Where | Runs | Covers |
 |---|---|---|---|
-| Unit | JVM, CI `build` job | every push | Capability and fallback decisions for every Android version, memory size and speech setup |
-| Screenshot | JVM (Robolectric + Roborazzi), CI `build` job | every push | 360dp small, 411dp standard, 480dp large; light and dark; 200% text |
-| Lint | CI `build` job | every push | Android lint; errors fail the build |
-| Emulator | GitHub Actions, KVM | every push | Launch and draw on Android 8.0 (small screen), 10 (standard), 16 (large) |
+| Unit | JVM, CI `build` job | every push | Ported iOS suites (importance, naming, smart collections, search, step visibility, appearance); capability decisions |
+| Store | JVM + real SQLite (Robolectric) | every push | What is saved is what comes back after the database is closed and reopened; delete cascades; no-op edits write nothing |
+| Screenshot | JVM (Robolectric + Roborazzi), CI `build` job | every push | Every A1 screen at 360, 411 and 480dp, light and dark, and 200% text |
+| Lint | CI `build` job | every push | Errors fail the build; findings are printed into the log |
+| End-to-end | Emulators, CI `emulator` job | every push | Android 8.0 (small), 10 (standard), 16 (large): capture, cancel, empty save, pin, delete, open, edit and rename, leave mid-edit, importance, status, appearance, activity restart — each checked against the database file afterwards |
+| iOS comparison | Emulator screenshots vs `ios-reference` | every push / on change | The same walk on both platforms, light and dark, compared by eye (see PARITY.md) |
 
-Screenshots from both the JVM tests and the emulators are pushed to the `android-ci-log`
-branch after every run, along with the JUnit XML results.
+Every screenshot is pushed to the `android-ci-log` branch after each run, with the JUnit
+results.
 
-**Known gaps in A0, on purpose:**
+**Known gaps in A1, on purpose:**
 
-- Screenshots are *recorded*, not *compared*. Nothing fails if a screen changes. Baselines
-  are committed in A1, when there are real screens worth protecting.
 - The release build (R8 shrinking) is not built in CI yet. It arrives with signing in A10.
-- Emulator AVDs on Android 8 and 10 have under 3 GB of RAM, so they report the reduced-
-  effects mode. That is the low-memory path working as designed, and is how the reduced path
-  gets exercised on every push.
 - Nothing has run on a real phone.
+- Animations are checked for correctness only (the right state at the end), not frame by
+  frame.
 
 ## How it grows
 
 | When | Added |
 |---|---|
-| A1 | Screenshot baselines committed; CI fails on unintended visual change. Unit tests ported from `../Tests/*.swift` with identical cases |
 | A2 | Android 12 and 13 added to the emulator matrix (on-device speech starts at 12) |
 | A4 | Startup and Map frame-time benchmarks on the emulator, with budgets that fail the build |
 | A5 | Foldable and tablet emulator profiles |
