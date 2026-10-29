@@ -236,7 +236,8 @@ fun topBarInset(): Dp =
 @Composable
 private fun detailDate(time: Long): String {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val locale = Locale.getDefault()
+    // From the configuration, so a language change while the app is open re-formats it.
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0] ?: Locale.getDefault()
     val hour = if (android.text.format.DateFormat.is24HourFormat(context)) "Hmm" else "hmma"
     val date = SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, "MMMd"), locale).format(Date(time))
     val clock = SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, hour), locale).format(Date(time))
