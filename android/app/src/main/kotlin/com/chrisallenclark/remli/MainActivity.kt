@@ -1,14 +1,12 @@
 package com.chrisallenclark.remli
 
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.runtime.remember
-import com.chrisallenclark.remli.capabilities.AndroidDeviceFacts
-import com.chrisallenclark.remli.capabilities.DeviceCapabilities
-import com.chrisallenclark.remli.ui.theme.RemliPalette
+import com.chrisallenclark.remli.ui.RemliApp
 
 class MainActivity : ComponentActivity() {
 
@@ -18,10 +16,20 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        val app = application as RemliApplication
         setContent {
-            val capabilities = remember { DeviceCapabilities.from(AndroidDeviceFacts.read(applicationContext)) }
-            val palette = if (isSystemInDarkTheme()) RemliPalette.Dark else RemliPalette.Light
-            FoundationScreen(capabilities, palette)
+            RemliApp(
+                store = app.store,
+                appearanceStore = app.appearance,
+                capabilities = app.capabilities,
+                // The app's own appearance setting can differ from the phone's, so the
+                // status bar icons follow the app rather than the system.
+                onDarkChanged = { dark ->
+                    val style = if (dark) SystemBarStyle.dark(Color.TRANSPARENT)
+                    else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+                    enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+                },
+            )
         }
     }
 }

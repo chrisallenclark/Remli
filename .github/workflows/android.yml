@@ -151,12 +151,12 @@ jobs:
           working-directory: android
           # Each line runs in its own `sh -c`, which has no pipefail — so the test log is
           # redirected rather than piped through tee, or a failing test would pass the step.
+          # The APKs are left installed after the run so the screenshots the tests took can be
+          # pulled off the device; they live in the app's own storage.
           script: |
-            ./gradlew --stacktrace -Premli.versionCode=${{ github.run_number }} :app:connectedDebugAndroidTest > "$RUNNER_TEMP/emulator-${{ matrix.api }}.log" 2>&1 || { tail -120 "$RUNNER_TEMP/emulator-${{ matrix.api }}.log"; exit 1; }
-            ./gradlew -Premli.versionCode=${{ github.run_number }} :app:installDebug
-            adb shell am start -W -n com.chrisallenclark.remli/.MainActivity
-            sleep 4
-            mkdir -p "$RUNNER_TEMP/shots" && adb exec-out screencap -p > "$RUNNER_TEMP/shots/emulator-api${{ matrix.api }}-${{ matrix.size }}.png"
+            mkdir -p "$RUNNER_TEMP/shots"
+            ./gradlew --stacktrace -Premli.versionCode=${{ github.run_number }} -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true :app:connectedDebugAndroidTest > "$RUNNER_TEMP/emulator-${{ matrix.api }}.log" 2>&1 || { tail -120 "$RUNNER_TEMP/emulator-${{ matrix.api }}.log"; adb pull /sdcard/Android/data/com.chrisallenclark.remli/files/screens "$RUNNER_TEMP/shots/" || true; exit 1; }
+            adb pull /sdcard/Android/data/com.chrisallenclark.remli/files/screens "$RUNNER_TEMP/shots/" || true
 
       - name: Upload emulator results
         if: always()
@@ -194,6 +194,7 @@ jobs:
           set +e
           out="$RUNNER_TEMP/android-ci-log"
           mkdir -p "$out/screenshots"
+          # Emulator screens are named by API level; JVM screens by screen and size.
           find "$RUNNER_TEMP/artifacts" -name '*.png' -exec cp {} "$out/screenshots/" \;
           # Test results, so a failure's full stack trace is readable over plain git.
           mkdir -p "$out/test-results"
