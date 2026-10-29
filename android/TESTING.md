@@ -13,7 +13,17 @@ something for them to catch.
 | Emulator | GitHub Actions, KVM | every push | Launch and draw on Android 8.0 (small screen), 10 (standard), 16 (large) |
 
 Screenshots from both the JVM tests and the emulators are pushed to the `android-ci-log`
-branch after every run.
+branch after every run, along with the JUnit XML results.
+
+**Known gaps in A0, on purpose:**
+
+- Screenshots are *recorded*, not *compared*. Nothing fails if a screen changes. Baselines
+  are committed in A1, when there are real screens worth protecting.
+- The release build (R8 shrinking) is not built in CI yet. It arrives with signing in A10.
+- Emulator AVDs on Android 8 and 10 have under 3 GB of RAM, so they report the reduced-
+  effects mode. That is the low-memory path working as designed, and is how the reduced path
+  gets exercised on every push.
+- Nothing has run on a real phone.
 
 ## How it grows
 

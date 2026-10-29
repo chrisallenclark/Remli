@@ -26,8 +26,8 @@ A feature is never moved past **Built** without the evidence that status names.
 
 | Feature | iOS source | Android | Status | Evidence |
 |---|---|---|---|---|
-| Device capability check & fallbacks | — (Android only) | `capabilities/` | Built | `DeviceCapabilitiesTest` |
-| Colour tokens (light/dark) | `Resources/Assets.xcassets`, `Theme.swift` | `ui/theme/Palette.kt` | Built | values copied; screenshot review pending |
+| Device capability check & fallbacks | — (Android only) | `capabilities/` | Emulator | `DeviceCapabilitiesTest` (7 cases); `LaunchTest` on Android 8.0, 10, 16 emulators, run 4 (`ed37e2f`). Not yet on a real phone |
+| Colour tokens (light/dark) | `Resources/Assets.xcassets`, `Theme.swift` | `ui/theme/Palette.kt` | Built | Values copied from the colorsets; light and dark rendered in screenshot tests and reviewed by eye. No side-by-side with an iPhone yet |
 | Typography (serif idea text) | `Theme.swift` | — | — | A1: open-licence stand-ins for New York / SF Pro |
 | Spacing, radii, motion tokens | `Theme.swift` | — | — | A1 |
 | Data model (Idea, Space/Collection, Link) | `Sources/Shared/Models` | — | — | A1 |
