@@ -41,8 +41,13 @@ class IdeaFlowTest {
 
     @Before fun start() = rule.reset()
 
-    /** Reads the database file afresh, bypassing the running store entirely. */
-    private fun onDisk() = RemliDatabase(InstrumentationRegistry.getInstrumentation().targetContext).use { it.readLibrary() }
+    /**
+     * Reads the database file afresh, bypassing the running store entirely. Closed by hand:
+     * SQLiteOpenHelper only became AutoCloseable in Android 10, so `use` fails on 8 and 9.
+     */
+    private fun onDisk() = RemliDatabase(InstrumentationRegistry.getInstrumentation().targetContext).let { db ->
+        try { db.readLibrary() } finally { db.close() }
+    }
 
     /** The first row's accessibility label, "Idea: <title>". */
     private fun firstRow(): String =
