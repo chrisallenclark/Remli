@@ -146,7 +146,7 @@ private fun IdeaListItem(
     Box(modifier.padding(horizontal = Theme.Space.md)) {
         IdeaRow(
             idea = idea,
-            category = library.category(of = idea),
+            category = library.categoryOf(idea),
             now = now,
             modifier = Modifier
                 .graphicsLayer { val s = if (menu) 1.02f else 1f; scaleX = s; scaleY = s }

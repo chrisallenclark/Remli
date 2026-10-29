@@ -47,7 +47,7 @@ sealed interface SmartCollection {
         InProgress -> idea.status == IdeaStatus.Active
         Tasks -> idea.kind == IdeaKind.Task && idea.status != IdeaStatus.Done
         is Category -> {
-            val category = library.category(of = idea)
+            val category = library.categoryOf(idea)
             when {
                 category == null -> false
                 category.id == id -> true
@@ -72,9 +72,9 @@ sealed interface SmartCollection {
 
             val counts = linkedMapOf<String, Tally>()
             for (idea in ideas) {
-                val category = library.category(of = idea) ?: continue
+                val category = library.categoryOf(idea) ?: continue
                 counts.getOrPut(category.id) { Tally(category.id, category.name, category.parentId, 0) }.total += 1
-                val parent = library.parent(of = category)
+                val parent = library.parentOf(category)
                 if (parent != null) {
                     counts.getOrPut(parent.id) { Tally(parent.id, parent.name, null, 0) }.total += 1
                 }

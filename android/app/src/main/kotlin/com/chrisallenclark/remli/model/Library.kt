@@ -19,9 +19,9 @@ data class Library(
 
     fun category(id: String?): IdeaCategory? = id?.let { categoriesById[it] }
 
-    fun category(of idea: Idea): IdeaCategory? = category(idea.categoryId)
+    fun categoryOf(idea: Idea): IdeaCategory? = category(idea.categoryId)
 
-    fun parent(of category: IdeaCategory): IdeaCategory? = category(category.parentId)
+    fun parentOf(category: IdeaCategory): IdeaCategory? = category(category.parentId)
 
     /**
      * A to-do that exists as a step towards something else. Belongs on its roadmap only.
