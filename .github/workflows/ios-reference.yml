@@ -1,0 +1,113 @@
+name: iOS reference screenshots
+
+# Builds the iOS app — from the iOS sources exactly as they are — in the simulator and
+# screenshots the screens the Android app is matching, in light and dark.
+#
+# Android-branch tooling only. It never runs on the iOS branch, publishes nothing that the
+# iOS workflows read (no ci-* or rel-* tags; results go to the `ios-reference` branch), and
+# the project it builds comes from android/tools/ios-reference/project.yml, which includes
+# the iOS project.yml without changing it.
+
+on:
+  push:
+    branches: ["remli-android"]
+    paths:
+      - "android/tools/ios-reference/**"
+      - ".github/workflows/ios-reference.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ios-reference
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  screens:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Select newest Xcode
+        run: |
+          latest=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$latest" ] && sudo xcode-select -s "$latest"
+          xcodebuild -version
+
+      - name: Generate project
+        working-directory: android/tools/ios-reference
+        run: |
+          brew install xcodegen
+          xcodegen generate --spec project.yml
+
+      # A standard-size iPhone (not Pro Max, Plus or Air): the width the Android "medium"
+      # screenshots are taken at, near enough.
+      - name: Pick and prepare a simulator
+        id: sim
+        run: |
+          udid=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys, re
+          best = None
+          for runtime, devices in json.load(sys.stdin)["devices"].items():
+              if "iOS" not in runtime: continue
+              for d in devices:
+                  n = d["name"]
+                  if not d.get("isAvailable") or not re.fullmatch(r"iPhone \d+( Pro)?", n): continue
+                  key = (runtime, "Pro" not in n, n)
+                  if best is None or key > best[0]: best = (key, d["udid"], n)
+          print(best[1]); print(best[2], file=sys.stderr)
+          ')
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+          # Software keyboard on screen, as on a phone.
+          defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false
+          xcrun simctl boot "$udid"
+          xcrun simctl bootstatus "$udid" -b
+          xcrun simctl status_bar "$udid" override --time "9:41" --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
+
+      - name: Build for testing
+        working-directory: android/tools/ios-reference
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project RemliReference.xcodeproj -scheme RemliReference \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee "$RUNNER_TEMP/build.log" | tail -40
+
+      - name: Capture light and dark
+        working-directory: android/tools/ios-reference
+        run: |
+          out="$RUNNER_TEMP/reference"
+          mkdir -p "$out"
+          for appearance in light dark; do
+            xcrun simctl ui "${{ steps.sim.outputs.udid }}" appearance "$appearance"
+            xcodebuild test-without-building \
+              -project RemliReference.xcodeproj -scheme RemliReference \
+              -destination "id=${{ steps.sim.outputs.udid }}" \
+              -derivedDataPath "$RUNNER_TEMP/dd" \
+              CODE_SIGNING_ALLOWED=NO \
+              TEST_RUNNER_REFERENCE_DIR="$out" TEST_RUNNER_APPEARANCE="$appearance" \
+              2>&1 | tee -a "$RUNNER_TEMP/test.log" | grep -E "Test Case|error|failed|passed" || true
+          done
+          ls -la "$out"
+
+      - name: Publish to the ios-reference branch
+        if: always()
+        run: |
+          set +e
+          out="$RUNNER_TEMP/publish"
+          mkdir -p "$out/screens"
+          cp "$RUNNER_TEMP"/reference/*.png "$out/screens/" 2>/dev/null
+          grep -aE "error:|failed|Test Case|\*\* (BUILD|TEST)" "$RUNNER_TEMP/build.log" "$RUNNER_TEMP/test.log" 2>/dev/null | head -200 > "$out/log.txt"
+          tail -80 "$RUNNER_TEMP/build.log" > "$out/build-tail.txt" 2>/dev/null
+          echo "$GITHUB_SHA" > "$out/sha.txt"
+          cd "$out"
+          git init -q
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "iOS reference screens for $GITHUB_SHA"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ios-reference

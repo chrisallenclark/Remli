@@ -1,0 +1,39 @@
+# Reference screenshots of the iOS app, for matching the Android app against.
+#
+# This spec INCLUDES the real iOS project definition (../../../project.yml) unchanged and
+# adds one UI-test target that drives the app through the screens being ported and saves
+# a screenshot of each. Nothing in the iOS project is modified: this file, the test, and
+# the generated project exist only for the Android work, and are built only by
+# .github/workflows/ios-reference.yml.
+
+include:
+  - path: ../../../project.yml
+    relativePaths: true
+
+name: RemliReference
+
+targets:
+  RemliReferenceUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: Remli
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.chrisallenclark.remli.referenceuitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Remli
+        SWIFT_VERSION: "5.0"
+
+schemes:
+  RemliReference:
+    build:
+      targets:
+        Remli: all
+        RemliReferenceUITests: [test]
+    test:
+      config: Debug
+      targets:
+        - RemliReferenceUITests
