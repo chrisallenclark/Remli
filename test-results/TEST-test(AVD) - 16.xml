@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuites tests="15" failures="0" errors="0" skipped="0" time="0.000" timestamp="2026-10-29T22:14:24" hostname="localhost">
+  <testsuite name="com.chrisallenclark.remli.IdeaFlowTest" tests="13" failures="0" errors="0" skipped="0" time="73.804" timestamp="2026-10-29T22:14:24" hostname="localhost">
+    <properties>
+      <property name="device" value="emulator-5554" />
+    </properties>
+    <testcase name="appearanceChoiceAppliesAndPersists" classname="com.chrisallenclark.remli.IdeaFlowTest" time="5.034" />
+    <testcase name="firstRunShowsTheEmptyState" classname="com.chrisallenclark.remli.IdeaFlowTest" time="2.416" />
+    <testcase name="leavingWhileEditingStillSaves" classname="com.chrisallenclark.remli.IdeaFlowTest" time="7.037" />
+    <testcase name="deleteFromTheDetailMenuReturnsToTheList" classname="com.chrisallenclark.remli.IdeaFlowTest" time="7.071" />
+    <testcase name="anIdeaOpensEditsAndKeepsTheEdits" classname="com.chrisallenclark.remli.IdeaFlowTest" time="9.769" />
+    <testcase name="captureSavesToDiskWithItsName" classname="com.chrisallenclark.remli.IdeaFlowTest" time="6.050" />
+    <testcase name="ideasSurviveTheActivityBeingRecreated" classname="com.chrisallenclark.remli.IdeaFlowTest" time="4.761" />
+    <testcase name="pinningFloatsAnIdeaToTheTop" classname="com.chrisallenclark.remli.IdeaFlowTest" time="7.585" />
+    <testcase name="importanceAndStatusArePersisted" classname="com.chrisallenclark.remli.IdeaFlowTest" time="6.328" />
+    <testcase name="saveDoesNothingUntilThereIsText" classname="com.chrisallenclark.remli.IdeaFlowTest" time="6.039" />
+    <testcase name="deleteFromTheListRemovesTheIdea" classname="com.chrisallenclark.remli.IdeaFlowTest" time="4.746" />
+    <testcase name="anUnnamedIdeaIsListedByItsFirstLine" classname="com.chrisallenclark.remli.IdeaFlowTest" time="3.242" />
+    <testcase name="cancelDiscardsTheDraft" classname="com.chrisallenclark.remli.IdeaFlowTest" time="3.726" />
+  </testsuite>
+  <testsuite name="com.chrisallenclark.remli.ReferenceScreensTest" tests="2" failures="0" errors="0" skipped="0" time="42.463" timestamp="2026-10-29T22:14:24" hostname="localhost">
+    <properties>
+      <property name="device" value="emulator-5554" />
+    </properties>
+    <testcase name="dark" classname="com.chrisallenclark.remli.ReferenceScreensTest" time="20.888" />
+    <testcase name="light" classname="com.chrisallenclark.remli.ReferenceScreensTest" time="21.575" />
+  </testsuite>
+</testsuites>

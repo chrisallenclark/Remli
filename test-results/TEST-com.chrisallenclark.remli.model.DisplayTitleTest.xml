@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.chrisallenclark.remli.model.DisplayTitleTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-29T22:06:26.249Z" hostname="runnervm48cm3" time="0.013">
+  <properties/>
+  <testcase name="raw values match what iOS stores" classname="com.chrisallenclark.remli.model.DisplayTitleTest" time="0.001"/>
+  <testcase name="unchanged text and status are not changes" classname="com.chrisallenclark.remli.model.DisplayTitleTest" time="0.006"/>
+  <testcase name="blank leading lines are skipped" classname="com.chrisallenclark.remli.model.DisplayTitleTest" time="0.001"/>
+  <testcase name="an empty idea is Untitled" classname="com.chrisallenclark.remli.model.DisplayTitleTest" time="0.0"/>
+  <testcase name="declaring a goal starts a seed, and only a seed" classname="com.chrisallenclark.remli.model.DisplayTitleTest" time="0.001"/>
+  <testcase name="unknown raw values fall back safely, as on iOS" classname="com.chrisallenclark.remli.model.DisplayTitleTest" time="0.0"/>
+  <testcase name="long first lines are cut at sixty characters with an ellipsis" classname="com.chrisallenclark.remli.model.DisplayTitleTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

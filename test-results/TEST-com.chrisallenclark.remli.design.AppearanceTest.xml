@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.chrisallenclark.remli.design.AppearanceTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-29T22:06:25.697Z" hostname="runnervm48cm3" time="0.549">
+  <properties/>
+  <testcase name="a choice survives a relaunch" classname="com.chrisallenclark.remli.design.AppearanceTest" time="0.186"/>
+  <testcase name="raw values are stable, because they are what lands in storage" classname="com.chrisallenclark.remli.design.AppearanceTest" time="0.044"/>
+  <testcase name="Android 8 and 9 are offered Light and Dark only" classname="com.chrisallenclark.remli.design.AppearanceTest" time="0.046"/>
+  <testcase name="each option maps to the right colour scheme" classname="com.chrisallenclark.remli.design.AppearanceTest" time="0.041"/>
+  <testcase name="every option is presentable" classname="com.chrisallenclark.remli.design.AppearanceTest" time="0.036"/>
+  <testcase name="setting the same value again does not churn storage" classname="com.chrisallenclark.remli.design.AppearanceTest" time="0.054"/>
+  <testcase name="a fresh install follows the phone" classname="com.chrisallenclark.remli.design.AppearanceTest" time="0.038"/>
+  <testcase name="going back to System is recorded, not just forgotten" classname="com.chrisallenclark.remli.design.AppearanceTest" time="0.041"/>
+  <testcase name="a value this build does not understand falls back to following the phone" classname="com.chrisallenclark.remli.design.AppearanceTest" time="0.039"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.chrisallenclark.remli.search.IdeaSearchTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-29T22:06:38.478Z" hostname="runnervm48cm3" time="0.003">
+  <properties/>
+  <testcase name="every word present in any order still matches" classname="com.chrisallenclark.remli.search.IdeaSearchTest" time="0.002"/>
+  <testcase name="a match in the body is reported as a body match, not a title one" classname="com.chrisallenclark.remli.search.IdeaSearchTest" time="0.0"/>
+  <testcase name="search still works with no vectors at all" classname="com.chrisallenclark.remli.search.IdeaSearchTest" time="0.001"/>
+  <testcase name="a tag match is reported as a tag match" classname="com.chrisallenclark.remli.search.IdeaSearchTest" time="0.0"/>
+  <testcase name="results are ordered by score, best first" classname="com.chrisallenclark.remli.search.IdeaSearchTest" time="0.0"/>
+  <testcase name="a Space name match is reported as a Space match" classname="com.chrisallenclark.remli.search.IdeaSearchTest" time="0.0"/>
+  <testcase name="meaning never outranks an exact title match" classname="com.chrisallenclark.remli.search.IdeaSearchTest" time="0.0"/>
+  <testcase name="an exact title match ranks first and says so" classname="com.chrisallenclark.remli.search.IdeaSearchTest" time="0.0"/>
+  <testcase name="an empty query returns nothing rather than everything" classname="com.chrisallenclark.remli.search.IdeaSearchTest" time="0.0"/>
+  <testcase name="a purely semantic hit is labelled as meaning, not invented word overlap" classname="com.chrisallenclark.remli.search.IdeaSearchTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

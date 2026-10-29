@@ -1,0 +1,8 @@
+=== build.log
+BUILD SUCCESSFUL in 2m 37s
+=== emulator-29.log
+BUILD SUCCESSFUL in 4m 17s
+=== emulator-36.log
+BUILD SUCCESSFUL in 5m 45s
+=== emulator-26.log
+BUILD SUCCESSFUL in 4m 18s

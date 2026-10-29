@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.chrisallenclark.remli.search.SmartCollectionTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-29T22:06:38.482Z" hostname="runnervm48cm3" time="0.003">
+  <properties/>
+  <testcase name="a chip that would show nothing is never offered" classname="com.chrisallenclark.remli.search.SmartCollectionTest" time="0.002"/>
+  <testcase name="selecting a Space includes the ideas inside its Collections" classname="com.chrisallenclark.remli.search.SmartCollectionTest" time="0.0"/>
+  <testcase name="selecting a Collection does not reach back up into its Space" classname="com.chrisallenclark.remli.search.SmartCollectionTest" time="0.001"/>
+  <testcase name="to-dos get their own chip and ideas do not appear in it" classname="com.chrisallenclark.remli.search.SmartCollectionTest" time="0.0"/>
+  <testcase name="a Space with no direct ideas still gets a chip" classname="com.chrisallenclark.remli.search.SmartCollectionTest" time="0.0"/>
+  <testcase name="an idea with no Space matches only All" classname="com.chrisallenclark.remli.search.SmartCollectionTest" time="0.0"/>
+  <testcase name="each Space is followed immediately by its own Collections" classname="com.chrisallenclark.remli.search.SmartCollectionTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

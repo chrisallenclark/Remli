@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.chrisallenclark.remli.model.ImportanceTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-29T22:06:26.268Z" hostname="runnervm48cm3" time="0.013">
+  <properties/>
+  <testcase name="clearing a correction returns to the guess" classname="com.chrisallenclark.remli.model.ImportanceTest" time="0.005"/>
+  <testcase name="enrichment will not overwrite a name you set" classname="com.chrisallenclark.remli.model.ImportanceTest" time="0.0"/>
+  <testcase name="scores between levels land on the nearer one" classname="com.chrisallenclark.remli.model.ImportanceTest" time="0.0"/>
+  <testcase name="re-enrichment cannot undo a correction" classname="com.chrisallenclark.remli.model.ImportanceTest" time="0.0"/>
+  <testcase name="clearing the name falls back to the first line, not to Untitled" classname="com.chrisallenclark.remli.model.ImportanceTest" time="0.0"/>
+  <testcase name="a correction wins, and the guess survives underneath it" classname="com.chrisallenclark.remli.model.ImportanceTest" time="0.001"/>
+  <testcase name="setting the same name again does not count as a change" classname="com.chrisallenclark.remli.model.ImportanceTest" time="0.003"/>
+  <testcase name="every level round-trips to itself" classname="com.chrisallenclark.remli.model.ImportanceTest" time="0.001"/>
+  <testcase name="an un-corrected idea reports the model's guess" classname="com.chrisallenclark.remli.model.ImportanceTest" time="0.0"/>
+  <testcase name="a name you set is kept, trimmed" classname="com.chrisallenclark.remli.model.ImportanceTest" time="0.0"/>
+  <testcase name="enrichment still names an idea you left alone" classname="com.chrisallenclark.remli.model.ImportanceTest" time="0.0"/>
+  <testcase name="naming an idea marks it as touched" classname="com.chrisallenclark.remli.model.ImportanceTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.chrisallenclark.remli.capabilities.DeviceCapabilitiesTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-29T22:06:13.221Z" hostname="runnervm48cm3" time="0.024">
+  <properties/>
+  <testcase name="voice falls back to typing, never to a cloud recogniser" classname="com.chrisallenclark.remli.capabilities.DeviceCapabilitiesTest" time="0.004"/>
+  <testcase name="low memory turns on reduced effects, unknown memory does not" classname="com.chrisallenclark.remli.capabilities.DeviceCapabilitiesTest" time="0.003"/>
+  <testcase name="Android 8 and 9 are supported but not the polished tier" classname="com.chrisallenclark.remli.capabilities.DeviceCapabilitiesTest" time="0.0"/>
+  <testcase name="blur needs Android 12 and enough memory" classname="com.chrisallenclark.remli.capabilities.DeviceCapabilitiesTest" time="0.0"/>
+  <testcase name="Android 10 through 16 are the polished tier" classname="com.chrisallenclark.remli.capabilities.DeviceCapabilitiesTest" time="0.0"/>
+  <testcase name="voice is private on Android 12+ with an on-device recogniser" classname="com.chrisallenclark.remli.capabilities.DeviceCapabilitiesTest" time="0.0"/>
+  <testcase name="notification permission is asked for from Android 13" classname="com.chrisallenclark.remli.capabilities.DeviceCapabilitiesTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

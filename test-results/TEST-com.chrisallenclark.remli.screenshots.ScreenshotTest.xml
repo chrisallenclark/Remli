@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.chrisallenclark.remli.screenshots.ScreenshotTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-10-29T22:06:26.308Z" hostname="runnervm48cm3" time="12.168">
+  <properties/>
+  <testcase name="ideasSmallLight" classname="com.chrisallenclark.remli.screenshots.ScreenshotTest" time="8.528"/>
+  <testcase name="settingsLight" classname="com.chrisallenclark.remli.screenshots.ScreenshotTest" time="0.381"/>
+  <testcase name="ideasLargeLight" classname="com.chrisallenclark.remli.screenshots.ScreenshotTest" time="0.431"/>
+  <testcase name="detailSmallLight" classname="com.chrisallenclark.remli.screenshots.ScreenshotTest" time="0.526"/>
+  <testcase name="detailSmallText200" classname="com.chrisallenclark.remli.screenshots.ScreenshotTest" time="0.368"/>
+  <testcase name="ideasMediumDark" classname="com.chrisallenclark.remli.screenshots.ScreenshotTest" time="0.373"/>
+  <testcase name="captureDark" classname="com.chrisallenclark.remli.screenshots.ScreenshotTest" time="0.231"/>
+  <testcase name="settingsDark" classname="com.chrisallenclark.remli.screenshots.ScreenshotTest" time="0.148"/>
+  <testcase name="ideasEmptyDark" classname="com.chrisallenclark.remli.screenshots.ScreenshotTest" time="0.164"/>
+  <testcase name="ideasMediumLight" classname="com.chrisallenclark.remli.screenshots.ScreenshotTest" time="0.181"/>
+  <testcase name="captureLight" classname="com.chrisallenclark.remli.screenshots.ScreenshotTest" time="0.114"/>
+  <testcase name="ideasEmptyLight" classname="com.chrisallenclark.remli.screenshots.ScreenshotTest" time="0.161"/>
+  <testcase name="ideasSmallText200" classname="com.chrisallenclark.remli.screenshots.ScreenshotTest" time="0.104"/>
+  <testcase name="detailMediumDark" classname="com.chrisallenclark.remli.screenshots.ScreenshotTest" time="0.154"/>
+  <testcase name="detailMediumLight" classname="com.chrisallenclark.remli.screenshots.ScreenshotTest" time="0.135"/>
+  <system-out><![CDATA[Roborazzi: ideas_small_light.png The differ result :ComparisonResult(pixelDifferences=0, pixelCount=921600, width=720, height=1280) changed:false
+Roborazzi: settings_medium_light.png The differ result :ComparisonResult(pixelDifferences=0, pixelCount=3295809, width=1233, height=2673) changed:false
+Roborazzi: ideas_large_light.png The differ result :ComparisonResult(pixelDifferences=0, pixelCount=4492800, width=1440, height=3120) changed:false
+Roborazzi: detail_small_light.png The differ result :ComparisonResult(pixelDifferences=0, pixelCount=921600, width=720, height=1280) changed:false
+Roborazzi: detail_small_text200.png The differ result :ComparisonResult(pixelDifferences=0, pixelCount=921600, width=720, height=1280) changed:false
+Roborazzi: ideas_medium_dark.png The differ result :ComparisonResult(pixelDifferences=0, pixelCount=3295809, width=1233, height=2673) changed:false
+Roborazzi: capture_medium_dark.png The differ result :ComparisonResult(pixelDifferences=0, pixelCount=3295809, width=1233, height=2673) changed:false
+Roborazzi: settings_medium_dark.png The differ result :ComparisonResult(pixelDifferences=0, pixelCount=3295809, width=1233, height=2673) changed:false
+Roborazzi: ideas_empty_dark.png The differ result :ComparisonResult(pixelDifferences=0, pixelCount=3295809, width=1233, height=2673) changed:false
+Roborazzi: ideas_medium_light.png The differ result :ComparisonResult(pixelDifferences=0, pixelCount=3295809, width=1233, height=2673) changed:false
+Roborazzi: capture_medium_light.png The differ result :ComparisonResult(pixelDifferences=0, pixelCount=3295809, width=1233, height=2673) changed:false
+Roborazzi: ideas_empty_light.png The differ result :ComparisonResult(pixelDifferences=0, pixelCount=3295809, width=1233, height=2673) changed:false
+Roborazzi: ideas_small_text200.png The differ result :ComparisonResult(pixelDifferences=0, pixelCount=921600, width=720, height=1280) changed:false
+Roborazzi: detail_medium_dark.png The differ result :ComparisonResult(pixelDifferences=0, pixelCount=3295809, width=1233, height=2673) changed:false
+Roborazzi: detail_medium_light.png The differ result :ComparisonResult(pixelDifferences=0, pixelCount=3295809, width=1233, height=2673) changed:false
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
