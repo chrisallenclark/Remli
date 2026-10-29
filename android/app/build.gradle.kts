@@ -83,6 +83,10 @@ android {
         // Lint runs in CI on every build. Errors fail it; warnings are reported.
         abortOnError = true
         checkReleaseBuilds = false
+        // Findings printed into the build log, which is the only place the cloud session
+        // can read them.
+        textReport = true
+        textOutput = file("stdout")
     }
 }
 

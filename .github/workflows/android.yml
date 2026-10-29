@@ -202,7 +202,7 @@ jobs:
           : > "$out/errors.txt"
           for f in $(find "$RUNNER_TEMP/artifacts" -name '*.log'); do
             echo "=== $(basename "$f")" >> "$out/errors.txt"
-            grep -aE "^e: |error:|FAILED|Exception|Caused by|What went wrong|BUILD (SUCCESSFUL|FAILED)|tests completed" "$f" | head -300 >> "$out/errors.txt"
+            grep -aE "^e: |error:|Error:|FAILED|Exception|Caused by|What went wrong|BUILD (SUCCESSFUL|FAILED)|tests completed" "$f" | head -300 >> "$out/errors.txt"
             tail -60 "$f" > "$out/tail-$(basename "$f" .log).txt"
           done
           {
