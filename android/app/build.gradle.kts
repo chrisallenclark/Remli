@@ -60,6 +60,13 @@ android {
             isIncludeAndroidResources = true
             all {
                 it.systemProperty("robolectric.pixelCopyRenderMode", "hardware")
+                // Robolectric's SDK 36 sandbox sets up ApplicationSharedMemory through
+                // FileDescriptor internals that JDK 17+ hides. Test JVM only; the app is
+                // unaffected.
+                it.jvmArgs(
+                    "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
+                    "--add-opens=java.base/java.io=ALL-UNNAMED",
+                )
                 // Full stack traces in the build log. CI output is the only window into a
                 // failure from the cloud session, so a one-line summary is not enough.
                 it.testLogging {
