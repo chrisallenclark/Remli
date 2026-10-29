@@ -67,7 +67,8 @@ fun CaptureSheet(onCancel: () -> Unit, onSave: (text: String, name: String) -> U
 
         // One line, quiet, above the thought.
         Box(Modifier.fillMaxWidth().padding(horizontal = Theme.Space.lg).padding(top = Theme.Space.xs, bottom = Theme.Space.xs)) {
-            if (name.isEmpty()) Txt("Name it (optional)", Theme.Typography.control, p.inkMuted)
+            // A system TextField placeholder on iOS: lighter than the body's custom one.
+            if (name.isEmpty()) Txt("Name it (optional)", Theme.Typography.control, p.ink.copy(alpha = 0.3f))
             BasicTextField(
                 value = name,
                 onValueChange = { name = it },

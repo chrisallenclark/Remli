@@ -9,7 +9,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.positionOnScreen
+import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.input.ImeAction
 import com.chrisallenclark.remli.design.ContextMenuOverlay
@@ -172,7 +173,7 @@ private fun IdeaListItem(
             category = category,
             now = now,
             modifier = Modifier
-                .onGloballyPositioned { bounds = it.boundsInWindow() }
+                .onGloballyPositioned { bounds = Rect(it.positionOnScreen(), it.size.toSize()) }
                 .graphicsLayer { alpha = if (menu) 0f else 1f }
                 .semantics { contentDescription = "Idea: ${idea.displayTitle}" }
                 .testTag("idea-row")

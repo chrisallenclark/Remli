@@ -126,12 +126,8 @@ final class ReferenceScreens: XCTestCase {
             sleep(1)
         }
 
-        // The gear is the last button in the Ideas navigation bar; its accessibility label
-        // is whatever SF Symbols calls it, so it is found by position instead.
-        let bar = app.navigationBars.firstMatch
-        if bar.waitForExistence(timeout: 3), bar.buttons.count > 0 {
-            bar.buttons.element(boundBy: bar.buttons.count - 1).tap()
-            shot("12_settings")
-        }
+        // No Settings screenshot. Under test the app runs on an in-memory store and shows
+        // its "Storage unavailable" banner across the top, which covers the navigation bar —
+        // so neither Back nor the gear can be reached without changing the iOS app.
     }
 }

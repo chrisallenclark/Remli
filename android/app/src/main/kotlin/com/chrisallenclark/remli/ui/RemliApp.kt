@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -147,6 +148,15 @@ fun RemliApp(
                                         trailing = {
                                             GlassIconButton(Symbol.Gear, "Settings", onClick = { showingSettings = true }, modifier = Modifier.testTag("open-settings"))
                                         },
+                                    )
+                                    // iOS insets Capture with .ultraThinMaterial, which reads as a
+                                    // soft band behind the button and the tab bar.
+                                    Box(
+                                        Modifier
+                                            .align(Alignment.BottomCenter)
+                                            .fillMaxWidth()
+                                            .height(tabBarSpace + captureSpace + Theme.Space.xs)
+                                            .background(Chrome.materialFill()),
                                     )
                                     CaptureButton(
                                         onClick = { capturing = true },

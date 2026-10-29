@@ -27,6 +27,10 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionOnScreen
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -92,8 +96,9 @@ fun IosMenu(
 
 /**
  * `.contextMenu`: the screen dims, the pressed element lifts out of it in place, and the
- * menu opens beneath. [lifted] is drawn again at [anchor] (its bounds in the window) above
- * the dimming, which is how iOS keeps the thing you pressed in focus.
+ * menu opens beneath. [lifted] is drawn again at [anchor] — its bounds **on screen** — above
+ * the dimming, which is how iOS keeps the thing you pressed in focus. Screen coordinates,
+ * because the overlay is its own window and need not share the app window's origin.
  */
 @Composable
 fun ContextMenuOverlay(
@@ -114,27 +119,30 @@ fun ContextMenuOverlay(
         properties = PopupProperties(focusable = true),
     ) {
         AnimatedVisibility(visibleState = state, enter = fadeIn(Theme.Motion.standard()), exit = fadeOut(Theme.Motion.standard())) {
+            var origin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
             BoxWithConstraints(
                 Modifier
                     .fillMaxSize()
+                    .onGloballyPositioned { origin = it.positionOnScreen() }
                     .background(Color.Black.copy(alpha = if (palette.isDark) 0.45f else 0.22f))
                     .pressable(onClick = onDismiss),
             ) {
+                val local = anchor.translate(-origin.x, -origin.y)
                 with(density) {
                     // Below the row when it fits, above it when the row is near the bottom.
                     val panelHeight = (items.size * 44 + 24).dp.toPx()
-                    val below = anchor.bottom + 8.dp.toPx()
-                    val menuTop = if (below + panelHeight <= constraints.maxHeight) below else anchor.top - 8.dp.toPx() - panelHeight
+                    val below = local.bottom + 8.dp.toPx()
+                    val menuTop = if (below + panelHeight <= constraints.maxHeight) below else local.top - 8.dp.toPx() - panelHeight
                     Box(
                         Modifier
-                            .offset { IntOffset(anchor.left.toInt(), anchor.top.toInt()) }
-                            .width(anchor.width.toDp())
+                            .offset { IntOffset(local.left.toInt(), local.top.toInt()) }
+                            .width(local.width.toDp())
                             .graphicsLayer { scaleX = 1.02f; scaleY = 1.02f },
                     ) { lifted() }
                     MenuPanel(
                         items,
                         onDismiss,
-                        Modifier.offset { IntOffset((anchor.left + 24.dp.toPx()).toInt(), menuTop.toInt().coerceAtLeast(0)) },
+                        Modifier.offset { IntOffset((local.left + 24.dp.toPx()).toInt(), menuTop.toInt().coerceAtLeast(0)) },
                     )
                 }
             }
