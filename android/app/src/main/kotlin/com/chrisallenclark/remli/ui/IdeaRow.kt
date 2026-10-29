@@ -58,10 +58,13 @@ fun IdeaRow(idea: Idea, category: IdeaCategory?, now: Long, modifier: Modifier =
     }
 }
 
-/** `Text(date, format: .relative(presentation: .named))` — "2 minutes ago", "Yesterday". */
+/**
+ * `Text(date, format: .relative(presentation: .named))` — "now", "1 second ago",
+ * "2 minutes ago", "yesterday", matching the iOS reference screens.
+ */
 fun relativeDate(time: Long, now: Long): String =
-    if (now - time < DateUtils.MINUTE_IN_MILLIS) "Just now"
-    else DateUtils.getRelativeTimeSpanString(time, now, DateUtils.MINUTE_IN_MILLIS).toString()
+    if (now - time < DateUtils.SECOND_IN_MILLIS) "now"
+    else DateUtils.getRelativeTimeSpanString(time, now, DateUtils.SECOND_IN_MILLIS).toString()
 
 /** A Space's name in its own colour. Port of CategoryChip. */
 @Composable

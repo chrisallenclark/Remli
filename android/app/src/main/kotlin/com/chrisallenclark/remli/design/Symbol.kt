@@ -42,6 +42,8 @@ enum class Symbol(val sfName: String, @param:DrawableRes val drawable: Int) {
     ChevronLeft("chevron.left", R.drawable.ms_arrow_back_ios_new),
     Close("xmark", R.drawable.ms_close),
     Checkmark("checkmark", R.drawable.ms_check),
+    MagnifyingGlass("magnifyingglass", R.drawable.ms_search),
+    XmarkCircleFill("xmark.circle.fill", R.drawable.ms_cancel_fill1),
 
     // Idea actions
     Pin("pin", R.drawable.ms_push_pin),

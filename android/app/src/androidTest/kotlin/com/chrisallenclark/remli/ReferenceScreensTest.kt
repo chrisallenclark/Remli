@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.chrisallenclark.remli.design.Appearance
@@ -69,7 +70,7 @@ class ReferenceScreensTest {
 
         rule.onNodeWithTag("idea-detail").performTouchInput { swipeUp() }
         Shots.take("${prefix}_09_detail_scrolled")
-        rule.onNodeWithTag("idea-detail").performTouchInput { androidx.compose.ui.test.swipeDown() }
+        rule.onNodeWithTag("idea-detail").performTouchInput { swipeDown() }
 
         rule.onNodeWithTag("detail-menu").performClick()
         rule.waitForText("Edit")

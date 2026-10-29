@@ -229,10 +229,19 @@ fun IdeaDetailScreen(
 fun topBarInset(): Dp =
     WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + Chrome.barHeight
 
-/** `.dateTime.day().month(.abbreviated).hour().minute()` — "29 Oct, 16:41" in the phone's locale. */
+/**
+ * `.dateTime.day().month(.abbreviated).hour().minute()` — "Oct 29 at 9:04 PM" in English,
+ * as on iOS, and the locale's own pattern elsewhere. Follows the phone's 12/24-hour setting.
+ */
+@Composable
 private fun detailDate(time: Long): String {
-    val pattern = android.text.format.DateFormat.getBestDateTimePattern(Locale.getDefault(), "dMMMjmm")
-    return SimpleDateFormat(pattern, Locale.getDefault()).format(Date(time))
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val locale = Locale.getDefault()
+    val hour = if (android.text.format.DateFormat.is24HourFormat(context)) "Hmm" else "hmma"
+    val date = SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, "MMMd"), locale).format(Date(time))
+    val clock = SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, hour), locale).format(Date(time))
+    return if (locale.language == "en") "$date at $clock"
+    else SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, "MMMd$hour"), locale).format(Date(time))
 }
 
 /** A row of tags. Port of TagRow. */

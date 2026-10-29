@@ -126,13 +126,12 @@ final class ReferenceScreens: XCTestCase {
             sleep(1)
         }
 
-        for label in ["Settings", "gearshape", "Gear"] {
-            let settings = app.buttons[label]
-            if settings.exists {
-                settings.tap()
-                shot("12_settings")
-                break
-            }
+        // The gear is the last button in the Ideas navigation bar; its accessibility label
+        // is whatever SF Symbols calls it, so it is found by position instead.
+        let bar = app.navigationBars.firstMatch
+        if bar.waitForExistence(timeout: 3), bar.buttons.count > 0 {
+            bar.buttons.element(boundBy: bar.buttons.count - 1).tap()
+            shot("12_settings")
         }
     }
 }

@@ -63,6 +63,7 @@ fun Modifier.pressable(
     enabled: Boolean = true,
     label: String? = null,
     role: Role = Role.Button,
+    dimWhenDisabled: Boolean = true,
     onClick: () -> Unit,
 ): Modifier {
     val interaction = remember { MutableInteractionSource() }
@@ -70,7 +71,7 @@ fun Modifier.pressable(
     val alpha by animateFloatAsState(if (pressed) 0.55f else 1f, Theme.Motion.standard(), label = "press")
     return this
         .then(if (label != null) Modifier.semantics { contentDescription = label } else Modifier)
-        .alpha(if (enabled) alpha else 0.35f)
+        .alpha(if (enabled) alpha else if (dimWhenDisabled) 0.35f else 1f)
         .clickable(interactionSource = interaction, indication = null, enabled = enabled, role = role, onClick = onClick)
 }
 
@@ -105,14 +106,18 @@ fun GlassTextButton(
             .height(Chrome.barButton)
             .widthIn(min = Chrome.barButton)
             .then(if (fill != null) Modifier.background(fill, CircleShape) else Modifier.glass(CircleShape))
-            .pressable(enabled = enabled, onClick = onClick)
+            .pressable(enabled = enabled, dimWhenDisabled = false, onClick = onClick)
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,
     ) {
         BasicText(
             text,
             style = (if (bold) Theme.Typography.barButtonBold else Theme.Typography.barButton)
-                .copy(color = if (fill != null) p.canvas else p.ink),
+                .copy(color = when {
+                    fill != null -> p.canvas
+                    enabled -> p.ink
+                    else -> p.inkMuted.copy(alpha = 0.6f)
+                }),
         )
     }
 }

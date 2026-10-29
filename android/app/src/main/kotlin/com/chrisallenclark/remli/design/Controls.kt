@@ -15,12 +15,15 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
@@ -57,9 +61,8 @@ data class MenuItem(
 )
 
 /**
- * A pull-down menu as iOS draws one: a rounded, frosted panel of full-width rows, label on
- * the left and glyph on the right, destructive rows in red. Used for both the "⋯" menu and
- * long-press context menus.
+ * A pull-down menu as iOS 26 draws one: a large-radius frosted panel, glyph then label on
+ * each row, destructive rows in red, a hairline between groups. Used for the "⋯" menu.
  */
 @Composable
 fun IosMenu(
@@ -82,36 +85,101 @@ fun IosMenu(
             enter = scaleIn(Theme.Motion.standard(), initialScale = 0.6f, transformOrigin = TransformOrigin(1f, 0f)) + fadeIn(Theme.Motion.standard()),
             exit = scaleOut(Theme.Motion.standard(), targetScale = 0.8f, transformOrigin = TransformOrigin(1f, 0f)) + fadeOut(Theme.Motion.standard()),
         ) {
-            val shape = ContinuousShape(Theme.Radius.lg)
-            Column(
+            MenuPanel(items, onDismiss, Modifier.padding(Theme.Space.xs))
+        }
+    }
+}
+
+/**
+ * `.contextMenu`: the screen dims, the pressed element lifts out of it in place, and the
+ * menu opens beneath. [lifted] is drawn again at [anchor] (its bounds in the window) above
+ * the dimming, which is how iOS keeps the thing you pressed in focus.
+ */
+@Composable
+fun ContextMenuOverlay(
+    expanded: Boolean,
+    anchor: androidx.compose.ui.geometry.Rect,
+    onDismiss: () -> Unit,
+    items: List<MenuItem>,
+    lifted: @Composable () -> Unit,
+) {
+    val state = remember { MutableTransitionState(false) }
+    state.targetState = expanded
+    if (!state.currentState && !state.targetState && state.isIdle) return
+
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    Popup(
+        popupPositionProvider = remember { WindowOrigin },
+        onDismissRequest = onDismiss,
+        properties = PopupProperties(focusable = true),
+    ) {
+        AnimatedVisibility(visibleState = state, enter = fadeIn(Theme.Motion.standard()), exit = fadeOut(Theme.Motion.standard())) {
+            BoxWithConstraints(
                 Modifier
-                    .testTag("menu")
-                    .padding(Theme.Space.xs)
-                    .width(250.dp)
-                    .shadow(24.dp, shape, ambientColor = Color.Black.copy(alpha = 0.25f), spotColor = Color.Black.copy(alpha = 0.25f))
-                    .background(palette.surface.copy(alpha = 0.97f), shape)
-                    .border(0.5.dp, palette.hairline, shape)
-                    .padding(vertical = 6.dp),
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = if (palette.isDark) 0.45f else 0.22f))
+                    .pressable(onClick = onDismiss),
             ) {
-                items.forEachIndexed { index, item ->
-                    if (item.dividerBefore && index > 0) {
-                        Spacer(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(6.dp).background(palette.hairline.copy(alpha = 0.6f)))
-                    }
-                    val color = if (item.destructive) DestructiveRed else palette.ink
-                    Row(
+                with(density) {
+                    // Below the row when it fits, above it when the row is near the bottom.
+                    val panelHeight = (items.size * 44 + 24).dp.toPx()
+                    val below = anchor.bottom + 8.dp.toPx()
+                    val menuTop = if (below + panelHeight <= constraints.maxHeight) below else anchor.top - 8.dp.toPx() - panelHeight
+                    Box(
                         Modifier
-                            .fillMaxWidth()
-                            .pressable(label = item.label) { onDismiss(); item.action() }
-                            .padding(horizontal = Theme.Space.md, vertical = 11.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Txt(item.label, Theme.Typography.body, color, Modifier.weight(1f))
-                        SymbolIcon(item.symbol, color, 17.dp)
-                    }
+                            .offset { IntOffset(anchor.left.toInt(), anchor.top.toInt()) }
+                            .width(anchor.width.toDp())
+                            .graphicsLayer { scaleX = 1.02f; scaleY = 1.02f },
+                    ) { lifted() }
+                    MenuPanel(
+                        items,
+                        onDismiss,
+                        Modifier.offset { IntOffset((anchor.left + 24.dp.toPx()).toInt(), menuTop.toInt().coerceAtLeast(0)) },
+                    )
                 }
             }
         }
     }
+}
+
+@Composable
+private fun MenuPanel(items: List<MenuItem>, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+    val shape = ContinuousShape(MenuRadius)
+    Column(
+        modifier
+            .testTag("menu")
+            .widthIn(min = 190.dp, max = 280.dp)
+            .width(IntrinsicSize.Max)
+            .shadow(28.dp, shape, ambientColor = Color.Black.copy(alpha = 0.22f), spotColor = Color.Black.copy(alpha = 0.22f))
+            .background(palette.surface.copy(alpha = 0.97f), shape)
+            .border(0.5.dp, palette.hairline, shape)
+            .padding(vertical = 6.dp),
+    ) {
+        items.forEachIndexed { index, item ->
+            if (item.dividerBefore && index > 0) {
+                Hairline(Modifier.padding(horizontal = Theme.Space.md, vertical = 6.dp))
+            }
+            val color = if (item.destructive) DestructiveRed else palette.ink
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .pressable(label = item.label) { onDismiss(); item.action() }
+                    .padding(horizontal = Theme.Space.md, vertical = 11.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Theme.Space.sm),
+            ) {
+                SymbolIcon(item.symbol, color, 16.dp)
+                Txt(item.label, Theme.Typography.body, color, maxLines = 1)
+            }
+        }
+    }
+}
+
+private val MenuRadius = 26.dp
+
+/** Places a popup at the window's origin, for overlays that draw across the whole window. */
+private object WindowOrigin : PopupPositionProvider {
+    override fun calculatePosition(anchorBounds: IntRect, windowSize: IntSize, layoutDirection: LayoutDirection, popupContentSize: IntSize) = IntOffset.Zero
 }
 
 /**

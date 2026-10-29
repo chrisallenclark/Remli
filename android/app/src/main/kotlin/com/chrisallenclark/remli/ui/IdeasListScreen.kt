@@ -1,6 +1,20 @@
 package com.chrisallenclark.remli.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.text.input.ImeAction
+import com.chrisallenclark.remli.design.ContextMenuOverlay
+import com.chrisallenclark.remli.design.pressable
+import com.chrisallenclark.remli.search.IdeaSearch
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -34,7 +48,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.chrisallenclark.remli.design.Chip
-import com.chrisallenclark.remli.design.IosMenu
 import com.chrisallenclark.remli.design.MenuItem
 import com.chrisallenclark.remli.design.Symbol
 import com.chrisallenclark.remli.design.SymbolIcon
@@ -66,16 +79,29 @@ fun IdeasListScreen(
     val collections = remember(library) { SmartCollection.available(listable, library) }
     var selectedKey by rememberSaveable { mutableStateOf(SmartCollection.All.key) }
     val selected = collections.firstOrNull { it.key == selectedKey } ?: SmartCollection.All
+    var query by rememberSaveable { mutableStateOf("") }
 
-    // Pinned ideas float to the top of every collection, then newest first.
-    val visible = remember(listable, selected, library) {
-        listable.filter { selected.matches(it, library) }
-            .sortedWith(compareByDescending<Idea> { it.pinned }.thenByDescending { it.createdAt })
+    val hits = remember(query, listable, library) {
+        if (query.isBlank()) emptyList()
+        else IdeaSearch.rank(query, listable.map { IdeaSearch.Document.of(it, library) }, queryVector = null)
+    }
+    val reasons = remember(hits) { hits.associate { it.id to it.reason } }
+
+    // Search results in rank order; otherwise pinned ideas float to the top, then newest first.
+    val visible = remember(listable, selected, library, hits, query) {
+        if (query.isNotBlank()) {
+            val byId = listable.associateBy { it.id }
+            hits.mapNotNull { byId[it.id] }
+        } else {
+            listable.filter { selected.matches(it, library) }
+                .sortedWith(compareByDescending<Idea> { it.pinned }.thenByDescending { it.createdAt })
+        }
     }
 
     if (library.ideas.isEmpty()) {
         Column(Modifier.fillMaxSize().padding(top = topInset)) {
             com.chrisallenclark.remli.design.LargeTitle("Ideas")
+            SearchField(query, onQuery = { query = it })
             // Nothing until the first read finishes, so a full library never flashes empty.
             if (isLoaded) FirstRunView(Modifier.weight(1f).padding(bottom = bottomInset))
         }
@@ -89,8 +115,9 @@ fun IdeasListScreen(
         verticalArrangement = Arrangement.spacedBy(Theme.Space.sm),
     ) {
         item(key = "title") { com.chrisallenclark.remli.design.LargeTitle("Ideas") }
+        item(key = "search") { SearchField(query, onQuery = { query = it }) }
 
-        if (collections.size > 1) {
+        if (query.isBlank() && collections.size > 1) {
             item(key = "chips") {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = Theme.Space.md),
@@ -104,21 +131,14 @@ fun IdeasListScreen(
         }
 
         if (visible.isEmpty()) {
-            item(key = "none") {
-                Txt(
-                    "Nothing in ${selected.label} yet",
-                    Theme.Typography.title,
-                    palette.ink,
-                    Modifier.fillMaxWidth().padding(top = Theme.Space.xl),
-                    textAlign = TextAlign.Center,
-                )
-            }
+            item(key = "none") { NoResultsView(query, selected) }
         } else {
             items(visible, key = { it.id }) { idea ->
                 IdeaListItem(
                     idea = idea,
                     library = library,
                     now = now,
+                    reason = reasons[idea.id],
                     onOpen = { onOpen(idea) },
                     onTogglePin = { onTogglePin(idea) },
                     onDelete = { onDelete(idea) },
@@ -136,20 +156,24 @@ private fun IdeaListItem(
     idea: Idea,
     library: Library,
     now: Long,
+    reason: IdeaSearch.MatchReason?,
     onOpen: () -> Unit,
     onTogglePin: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var menu by remember { mutableStateOf(false) }
+    var bounds by remember { mutableStateOf(Rect.Zero) }
     val haptics = LocalHapticFeedback.current
-    Box(modifier.padding(horizontal = Theme.Space.md)) {
+    val category = library.categoryOf(idea)
+    Column(modifier.padding(horizontal = Theme.Space.md), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         IdeaRow(
             idea = idea,
-            category = library.categoryOf(idea),
+            category = category,
             now = now,
             modifier = Modifier
-                .graphicsLayer { val s = if (menu) 1.02f else 1f; scaleX = s; scaleY = s }
+                .onGloballyPositioned { bounds = it.boundsInWindow() }
+                .graphicsLayer { alpha = if (menu) 0f else 1f }
                 .semantics { contentDescription = "Idea: ${idea.displayTitle}" }
                 .testTag("idea-row")
                 .combinedClickable(
@@ -162,14 +186,73 @@ private fun IdeaListItem(
                     },
                 ),
         )
-        IosMenu(
-            expanded = menu,
-            onDismiss = { menu = false },
-            items = listOf(
-                MenuItem(if (idea.pinned) "Unpin" else "Pin", if (idea.pinned) Symbol.PinSlash else Symbol.Pin, action = onTogglePin),
-                MenuItem("Delete", Symbol.Trash, destructive = true, action = onDelete),
-            ),
-        )
+        // Only while searching: a result should say how it was found.
+        if (reason != null) MatchReasonLabel(reason)
+    }
+    ContextMenuOverlay(
+        expanded = menu,
+        anchor = bounds,
+        onDismiss = { menu = false },
+        items = listOf(
+            MenuItem(if (idea.pinned) "Unpin" else "Pin", if (idea.pinned) Symbol.PinSlash else Symbol.Pin, action = onTogglePin),
+            MenuItem("Delete", Symbol.Trash, destructive = true, action = onDelete),
+        ),
+    ) { IdeaRow(idea = idea, category = category, now = now) }
+}
+
+@Composable
+private fun MatchReasonLabel(reason: IdeaSearch.MatchReason) {
+    Txt(reason.label, Theme.Typography.meta, palette.inkMuted, Modifier.padding(start = Theme.Space.xs, bottom = Theme.Space.xxs))
+}
+
+/** iOS's search field: a recessed capsule with a magnifier, under the large title. */
+@Composable
+private fun SearchField(query: String, onQuery: (String) -> Unit) {
+    val p = palette
+    val fill = if (p.isDark) Color(0x3D767680) else Color(0x1F767680)
+    Row(
+        Modifier
+            .padding(horizontal = Theme.Space.md)
+            .fillMaxWidth()
+            .height(36.dp)
+            .background(fill, CircleShape)
+            .padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        SymbolIcon(Symbol.MagnifyingGlass, p.inkMuted, 15.dp)
+        Box(Modifier.weight(1f)) {
+            if (query.isEmpty()) Txt("Search your ideas", Theme.Typography.body, p.inkMuted, maxLines = 1)
+            BasicTextField(
+                value = query,
+                onValueChange = onQuery,
+                singleLine = true,
+                textStyle = Theme.Typography.body.copy(color = p.ink),
+                cursorBrush = SolidColor(p.ember),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                modifier = Modifier.fillMaxWidth().testTag("search"),
+            )
+        }
+        if (query.isNotEmpty()) {
+            SymbolIcon(Symbol.XmarkCircleFill, p.inkMuted, 15.dp, Modifier.pressable(label = "Clear search") { onQuery("") })
+        }
+    }
+}
+
+@Composable
+private fun NoResultsView(query: String, collection: SmartCollection) {
+    val p = palette
+    Column(
+        Modifier.fillMaxWidth().padding(top = Theme.Space.xl, start = Theme.Space.lg, end = Theme.Space.lg),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Theme.Space.xs),
+    ) {
+        Txt(if (query.isBlank()) "Nothing in ${collection.label} yet" else "No matches", Theme.Typography.title, p.ink, textAlign = TextAlign.Center)
+        if (query.isNotBlank()) {
+            // iOS says Remli also searches by meaning; on Android that arrives with A3, so
+            // the hint is about words only until then.
+            Txt("Try a word from the idea itself.", Theme.Typography.meta, p.inkMuted, textAlign = TextAlign.Center)
+        }
     }
 }
 

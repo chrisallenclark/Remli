@@ -60,7 +60,6 @@ fun CaptureSheet(onCancel: () -> Unit, onSave: (text: String, name: String) -> U
                     onClick = { if (canSave) onSave(text.trim(), name.trim()) },
                     bold = true,
                     enabled = canSave,
-                    prominent = true,
                     modifier = Modifier.testTag("capture-save"),
                 )
             },
